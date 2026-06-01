@@ -1,0 +1,36 @@
+# Local environment configuration
+config.local.php
+
+# Composer dependencies
+vendor/
+composer.lock
+
+# Logs
+logs/
+*.log
+
+# Uploads and QR codes
+uploads/
+qr_codes/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS files
+Thumbs.db
+.AppleDouble
+.LSOverride
+._*
+
+# Node modules (if using npm)
+node_modules/
+package-lock.json
+
+# Environment file
+.env
+.env.local
