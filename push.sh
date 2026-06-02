@@ -38,7 +38,7 @@ git push origin main || {
 
 echo ""
 echo "☁️  Step 3: Deploying to DigitalOcean..."
-rsync -avz --delete ./ root@64.227.108.128:/var/www/silentbidbuddy/ \
+rsync -avz --delete ./ $DO_SERVER:$DO_PATH/ \
     --exclude='.git' \
     --exclude='node_modules' \
     --exclude='.DS_Store' \
