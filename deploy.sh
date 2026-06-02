@@ -122,6 +122,30 @@ EOF
 fi
 
 echo ""
+echo "📦 Step 7: Configure upload limits..."
+if command -v nginx &> /dev/null; then
+    # Set nginx client_max_body_size to 25MB
+    if grep -q "client_max_body_size" /etc/nginx/sites-enabled/silentbidbuddy 2>/dev/null; then
+        sed -i 's/client_max_body_size.*/client_max_body_size 25M;/' /etc/nginx/sites-enabled/silentbidbuddy
+    else
+        sed -i '/server {/a\    client_max_body_size 25M;' /etc/nginx/sites-enabled/silentbidbuddy
+    fi
+    nginx -t > /dev/null && systemctl reload nginx || true
+    echo "   ✓ Nginx configured for 25MB uploads"
+fi
+
+if command -v php &> /dev/null; then
+    # Update PHP configuration for larger uploads
+    PHP_INI=$(php -r 'echo php_ini_loaded_file();' 2>/dev/null)
+    if [ -f "$PHP_INI" ]; then
+        sed -i 's/^upload_max_filesize.*/upload_max_filesize = 25M/' "$PHP_INI" 2>/dev/null || true
+        sed -i 's/^post_max_size.*/post_max_size = 25M/' "$PHP_INI" 2>/dev/null || true
+        systemctl restart php8.3-fpm 2>/dev/null || true
+        echo "   ✓ PHP configured for 25MB uploads"
+    fi
+fi
+
+echo ""
 echo "✅ DEPLOYMENT COMPLETE!"
 echo ""
 echo "=================================="
