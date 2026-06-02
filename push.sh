@@ -15,7 +15,7 @@ fi
 COMMIT_MSG="$1"
 GITHUB_REPO="https://github.com/mcallpl/silentbidbuddy.git"
 DO_SERVER="root@64.227.108.128"
-DO_PATH="/var/www/silentbidbuddy"
+DO_PATH="/var/www/html/silentbidbuddy"
 
 echo "=================================="
 echo "PUSHING TO GITHUB + DIGITALOCEAN"

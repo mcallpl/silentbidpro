@@ -13,7 +13,7 @@ echo ""
 
 # Configuration
 DOMAIN="silentbidbuddy"
-WEB_ROOT="/var/www/silentbidbuddy"
+WEB_ROOT="/var/www/html/silentbidbuddy"
 DB_NAME="silentbidbuddy"
 DB_USER="mcallpl"
 DB_PASS="amazing123"
