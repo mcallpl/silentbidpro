@@ -68,7 +68,15 @@ if (!defined('REBRANDLY_API_KEY')) define('REBRANDLY_API_KEY', $vault_rebrandly_
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', __DIR__ . '/uploads/');
 if (!defined('QR_CODES_DIR')) define('QR_CODES_DIR', __DIR__ . '/qr_codes/');
 
-if (!defined('APP_DOMAIN')) define('APP_DOMAIN', getenv('APP_DOMAIN') ?: 'http://localhost');
+if (!defined('APP_DOMAIN')) {
+    // Auto-detect domain from current request or environment variable
+    if (!empty($_SERVER['HTTP_HOST'])) {
+        $protocol = !empty($_SERVER['HTTPS']) ? 'https' : 'http';
+        define('APP_DOMAIN', $protocol . '://' . $_SERVER['HTTP_HOST']);
+    } else {
+        define('APP_DOMAIN', getenv('APP_DOMAIN') ?: 'http://localhost:8000');
+    }
+}
 if (!defined('APP_NAME')) define('APP_NAME', 'Silent Bid Buddy');
 
 // ============================================================
