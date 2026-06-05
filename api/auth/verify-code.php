@@ -71,8 +71,8 @@ $domain = COOKIE_DOMAIN ?: ''; // Auto-detected from config.php
 $secure = !empty($_SERVER['HTTPS']); // HTTPS only on production
 $httponly = true; // Never expose to JavaScript
 
-error_log('[COOKIE] Headers sent: ' . (headers_sent() ? 'YES - PROBLEM!' : 'NO'));
-error_log('[COOKIE] Setting session cookie: name=' . SESSION_COOKIE_NAME . ', domain=' . $domain . ', path=' . $path . ', expires=' . date('Y-m-d H:i:s', $expires) . ', secure=' . ($secure ? 'yes' : 'no') . ', httponly=' . ($httponly ? 'yes' : 'no'));
+$cookie_log = '[COOKIE] Headers sent: ' . (headers_sent() ? 'YES - PROBLEM!' : 'NO') . PHP_EOL;
+$cookie_log .= '[COOKIE] Setting session cookie: name=' . SESSION_COOKIE_NAME . ', domain=' . $domain . ', path=' . $path . ', expires=' . date('Y-m-d H:i:s', $expires) . PHP_EOL;
 
 $result = false;
 if (PHP_VERSION_ID >= 70300) {
@@ -85,12 +85,15 @@ if (PHP_VERSION_ID >= 70300) {
         'httponly' => $httponly,
         'samesite' => 'Lax'
     ]);
-    error_log('[COOKIE] setcookie() returned: ' . ($result ? 'true (success)' : 'false (failed)'));
+    $cookie_log .= '[COOKIE] setcookie() returned: ' . ($result ? 'true (success)' : 'false (failed)') . PHP_EOL;
 } else {
     // PHP < 7.3 compatible syntax
     $result = setcookie(SESSION_COOKIE_NAME, $session_token, $expires, $path, $domain, $secure, $httponly);
-    error_log('[COOKIE] setcookie() returned: ' . ($result ? 'true (success)' : 'false (failed)'));
+    $cookie_log .= '[COOKIE] setcookie() returned: ' . ($result ? 'true (success)' : 'false (failed)') . PHP_EOL;
 }
+
+// Write to log file
+@file_put_contents('/var/www/html/silentbidbuddy/logs/session-cookie.log', date('Y-m-d H:i:s') . ' ' . $cookie_log, FILE_APPEND);
 
 // Get user data
 $user = dbGetRow(
