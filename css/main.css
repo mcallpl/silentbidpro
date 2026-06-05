@@ -530,11 +530,6 @@ body {
 
 .custom-bid-form {
     margin-top: var(--spacing-md);
-    display: none;
-}
-
-.custom-bid-form.show {
-    display: block !important;
 }
 
 .custom-bid-form input {

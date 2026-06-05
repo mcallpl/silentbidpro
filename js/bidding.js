@@ -11,15 +11,10 @@ SBB.Bidding = {
     pendingBid: null,
 
     init() {
-        console.log('[INIT] Bidding.init() called');
         this.startCountdown();
-        console.log('[INIT] startCountdown complete');
         this.loadBidFeed();
-        console.log('[INIT] loadBidFeed complete');
         this.setupEventListeners();
-        console.log('[INIT] setupEventListeners complete');
         this.startFeedRefresh();
-        console.log('[INIT] startFeedRefresh complete');
     },
 
     setupEventListeners() {
@@ -33,24 +28,16 @@ SBB.Bidding = {
         const toggleBtn = document.querySelector('.toggle-custom-bid');
         console.log('[SETUP] Looking for .toggle-custom-bid button:', toggleBtn);
 
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', function(e) {
+        // Custom bid form toggle
+        const customBidToggle = document.querySelector('.toggle-custom-bid');
+        if (customBidToggle) {
+            customBidToggle.addEventListener('click', function(e) {
                 e.preventDefault();
                 const form = document.getElementById('customBidForm');
                 if (form) {
-                    if (form.style.display === 'block') {
-                        form.style.display = 'none';
-                    } else {
-                        form.style.display = 'block';
-                        form.style.background = '#ffeb3b';
-                        form.style.padding = '20px';
-                        form.style.border = '3px solid red';
-                    }
-                    console.log('[CLICK] Form display:', form.style.display);
+                    form.style.display = form.style.display === 'block' ? 'none' : 'block';
                 }
             });
-        } else {
-            console.error('[ERROR] .toggle-custom-bid button NOT FOUND');
         }
 
         const customBidForm = document.getElementById('customBidForm');
