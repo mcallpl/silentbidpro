@@ -71,11 +71,13 @@ $domain = COOKIE_DOMAIN ?: ''; // Auto-detected from config.php
 $secure = !empty($_SERVER['HTTPS']); // HTTPS only on production
 $httponly = true; // Never expose to JavaScript
 
+error_log('[COOKIE] Headers sent: ' . (headers_sent() ? 'YES - PROBLEM!' : 'NO'));
 error_log('[COOKIE] Setting session cookie: name=' . SESSION_COOKIE_NAME . ', domain=' . $domain . ', path=' . $path . ', expires=' . date('Y-m-d H:i:s', $expires) . ', secure=' . ($secure ? 'yes' : 'no') . ', httponly=' . ($httponly ? 'yes' : 'no'));
 
+$result = false;
 if (PHP_VERSION_ID >= 70300) {
     // PHP 7.3+ array syntax
-    setcookie(SESSION_COOKIE_NAME, $session_token, [
+    $result = setcookie(SESSION_COOKIE_NAME, $session_token, [
         'expires' => $expires,
         'path' => $path,
         'domain' => $domain,
@@ -83,11 +85,11 @@ if (PHP_VERSION_ID >= 70300) {
         'httponly' => $httponly,
         'samesite' => 'Lax'
     ]);
-    error_log('[COOKIE] Cookie set successfully (PHP 7.3+ syntax)');
+    error_log('[COOKIE] setcookie() returned: ' . ($result ? 'true (success)' : 'false (failed)'));
 } else {
     // PHP < 7.3 compatible syntax
-    setcookie(SESSION_COOKIE_NAME, $session_token, $expires, $path, $domain, $secure, $httponly);
-    error_log('[COOKIE] Cookie set successfully (PHP <7.3 syntax)');
+    $result = setcookie(SESSION_COOKIE_NAME, $session_token, $expires, $path, $domain, $secure, $httponly);
+    error_log('[COOKIE] setcookie() returned: ' . ($result ? 'true (success)' : 'false (failed)'));
 }
 
 // Get user data
