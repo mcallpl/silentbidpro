@@ -18,6 +18,12 @@ if (file_exists($local_config_path)) {
 }
 
 // ============================================================
+// TIMEZONE CONFIGURATION
+// ============================================================
+// CRITICAL: Set timezone to Pacific Time (Los Angeles) for all PHP operations
+date_default_timezone_set('America/Los_Angeles');
+
+// ============================================================
 // DATABASE CONFIGURATION
 // ============================================================
 if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
