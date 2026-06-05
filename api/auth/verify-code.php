@@ -92,8 +92,6 @@ if (PHP_VERSION_ID >= 70300) {
     $cookie_log .= '[COOKIE] setcookie() returned: ' . ($result ? 'true (success)' : 'false (failed)') . PHP_EOL;
 }
 
-// Write to log file
-@file_put_contents('/var/www/html/silentbidbuddy/logs/session-cookie.log', date('Y-m-d H:i:s') . ' ' . $cookie_log, FILE_APPEND);
 
 // Get user data
 $user = dbGetRow(

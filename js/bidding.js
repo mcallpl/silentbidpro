@@ -35,20 +35,13 @@ SBB.Bidding = {
 
         if (toggleBtn) {
             toggleBtn.addEventListener('click', function(e) {
-                console.log('[CLICK] Toggle button clicked!');
                 e.preventDefault();
                 const form = document.getElementById('customBidForm');
-                console.log('[CLICK] Form element:', form);
                 if (form) {
-                    const isHidden = form.style.display === 'none';
-                    console.log('[CLICK] Form was hidden:', isHidden);
-                    form.style.display = isHidden ? 'block' : 'none';
-                    console.log('[CLICK] Form display now:', form.style.display);
-                } else {
-                    console.error('[ERROR] customBidForm element not found!');
+                    form.classList.toggle('show');
+                    console.log('[CLICK] Custom bid form toggled. Has show class:', form.classList.contains('show'));
                 }
             });
-            console.log('[SETUP] Click handler attached to toggle button');
         } else {
             console.error('[ERROR] .toggle-custom-bid button NOT FOUND');
         }
