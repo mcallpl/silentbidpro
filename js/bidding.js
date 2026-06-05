@@ -11,10 +11,15 @@ SBB.Bidding = {
     pendingBid: null,
 
     init() {
+        console.log('[INIT] Bidding.init() called');
         this.startCountdown();
+        console.log('[INIT] startCountdown complete');
         this.loadBidFeed();
+        console.log('[INIT] loadBidFeed complete');
         this.setupEventListeners();
+        console.log('[INIT] setupEventListeners complete');
         this.startFeedRefresh();
+        console.log('[INIT] startFeedRefresh complete');
     },
 
     setupEventListeners() {
