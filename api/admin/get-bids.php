@@ -67,7 +67,7 @@ $query = "SELECT
         i.current_high_bid,
         i.is_closed,
         u.full_name,
-        CONCAT(SUBSTR(u.phone_number, 1, 6), '...', SUBSTR(u.phone_number, -4)) as phone_display,
+        u.phone_number,
         (b.bid_amount = i.current_high_bid AND i.is_closed = 1) as is_winning_bid
      FROM bids b
      JOIN items i ON i.id = b.item_id

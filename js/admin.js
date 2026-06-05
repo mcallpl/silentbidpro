@@ -240,7 +240,7 @@ const AdminDashboard = {
                                 </td>
                                 <td>
                                     <strong>${this.escapeHtml(bid.full_name)}</strong>
-                                    <br><small style="color: #999;">${bid.phone_display}</small>
+                                    <br><small style="color: #999;">${this.formatPhoneNumber(bid.phone_number)}</small>
                                 </td>
                                 <td style="text-align: right; font-weight: bold;">$${bid.bid_amount.toFixed(2)}</td>
                                 <td style="text-align: right;">$${bid.current_high_bid.toFixed(2)}</td>
@@ -1337,6 +1337,20 @@ const AdminDashboard = {
         } else {
             return secs + 's';
         }
+    },
+
+    formatPhoneNumber(phone) {
+        if (!phone) return '';
+        // Remove all non-digits
+        const digits = phone.replace(/\D/g, '');
+        // Format as XXX-XXX-XXXX (assuming 10 digit number)
+        if (digits.length === 10) {
+            return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+        } else if (digits.length === 11 && digits[0] === '1') {
+            // Handle +1 prefix
+            return digits.slice(1, 4) + '-' + digits.slice(4, 7) + '-' + digits.slice(7);
+        }
+        return phone;
     },
 
     escapeHtml(text) {
