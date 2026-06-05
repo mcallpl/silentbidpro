@@ -240,7 +240,7 @@ const AdminDashboard = {
                                 </td>
                                 <td>
                                     <strong>${this.escapeHtml(bid.full_name)}</strong>
-                                    <br><a href="tel:${bid.phone_number}" style="color: #667eea; text-decoration: none; font-size: 0.9rem;"><strong>${this.formatPhoneNumber(bid.phone_number)}</strong></a>
+                                    <br><span class="phone-number-clickable" data-phone="${bid.phone_number}" style="color: #667eea; text-decoration: underline; cursor: pointer; font-size: 0.9rem; font-weight: bold;"><strong>${this.formatPhoneNumber(bid.phone_number)}</strong></span>
                                 </td>
                                 <td style="text-align: right; font-weight: bold;">$${bid.bid_amount.toFixed(2)}</td>
                                 <td style="text-align: right;">$${bid.current_high_bid.toFixed(2)}</td>
@@ -300,6 +300,15 @@ const AdminDashboard = {
             });
         });
 
+        // Clickable phone numbers - show call/text menu
+        document.querySelectorAll('.phone-number-clickable').forEach(span => {
+            span.addEventListener('click', (e) => {
+                e.preventDefault();
+                const phone = e.target.closest('.phone-number-clickable').dataset.phone;
+                this.showPhoneMenu(phone, e);
+            });
+        });
+
         // Sortable column headers
         document.querySelectorAll('th[data-sort-by]').forEach(th => {
             th.addEventListener('click', () => {
@@ -320,6 +329,51 @@ const AdminDashboard = {
 
         // Pagination
         this.renderPagination('bidsPagination', data.pagination, data.pagination.page, (p) => this.loadBids(p));
+    },
+
+    showPhoneMenu(phone, event) {
+        // Remove any existing menu
+        const existing = document.getElementById('phoneMenu');
+        if (existing) existing.remove();
+
+        // Create menu
+        const menu = document.createElement('div');
+        menu.id = 'phoneMenu';
+        menu.style.cssText = `
+            position: fixed;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            min-width: 180px;
+        `;
+
+        const rect = event.target.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 5) + 'px';
+        menu.style.left = (rect.left - 50) + 'px';
+
+        menu.innerHTML = `
+            <div style="padding: 0;">
+                <a href="tel:${phone}" style="display: block; padding: 12px 16px; color: #333; text-decoration: none; border-bottom: 1px solid #eee; cursor: pointer;">
+                    <strong>📞 Call</strong>
+                </a>
+                <a href="sms:${phone}" style="display: block; padding: 12px 16px; color: #333; text-decoration: none; cursor: pointer;">
+                    <strong>💬 Text</strong>
+                </a>
+            </div>
+        `;
+
+        document.body.appendChild(menu);
+
+        // Close menu when clicking outside
+        setTimeout(() => {
+            const closeMenu = () => {
+                if (menu && menu.parentNode) menu.remove();
+                document.removeEventListener('click', closeMenu);
+            };
+            document.addEventListener('click', closeMenu);
+        }, 100);
     },
 
     // ============================================================
