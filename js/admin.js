@@ -240,7 +240,7 @@ const AdminDashboard = {
                                 </td>
                                 <td>
                                     <strong>${this.escapeHtml(bid.full_name)}</strong>
-                                    <br><small style="color: #999;">${this.formatPhoneNumber(bid.phone_number)}</small>
+                                    <br><a href="tel:${bid.phone_number}" style="color: #667eea; text-decoration: none; font-size: 0.9rem;"><strong>${this.formatPhoneNumber(bid.phone_number)}</strong></a>
                                 </td>
                                 <td style="text-align: right; font-weight: bold;">$${bid.bid_amount.toFixed(2)}</td>
                                 <td style="text-align: right;">$${bid.current_high_bid.toFixed(2)}</td>
