@@ -90,9 +90,11 @@ function getSessionToken() {
 
     // Check cookie
     if (!empty($_COOKIE['session_token'])) {
+        error_log('[SESSION] Found session_token in cookie: ' . substr($_COOKIE['session_token'], 0, 10) . '...');
         return $_COOKIE['session_token'];
     }
 
+    error_log('[SESSION] No session_token found. Cookie domain: ' . COOKIE_DOMAIN . ', Available cookies: ' . json_encode(array_keys($_COOKIE)));
     return null;
 }
 
