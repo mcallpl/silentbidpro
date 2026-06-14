@@ -142,14 +142,19 @@
     .admin-link-row {
         display: grid;
         grid-template-columns: 1fr;
-        width: 100%;
-        max-width: 20.75rem;
+        inline-size: min(100%, 20.75rem);
+        max-inline-size: calc(100vw - 2rem);
+        margin-right: auto;
+        overflow: visible;
     }
 
     .landing-btn {
-        width: 100%;
-        max-width: 100%;
+        inline-size: 100%;
+        max-inline-size: 100%;
+        min-inline-size: 0;
         box-sizing: border-box;
+        justify-self: stretch;
+        white-space: normal;
     }
 
     .landing-hero-proof {

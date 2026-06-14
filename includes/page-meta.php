@@ -17,6 +17,20 @@ function currentCanonicalUrl() {
     return rtrim($base, '/') . $path . ($query ? '?' . $query : '');
 }
 
+function assetUrlWithVersion($path) {
+    $path = (string)$path;
+    if (preg_match('/^https?:\/\//', $path) || strpos($path, '?') !== false) {
+        return $path;
+    }
+
+    $file_path = __DIR__ . '/../' . ltrim($path, '/');
+    if (is_file($file_path)) {
+        return $path . '?v=' . filemtime($file_path);
+    }
+
+    return $path;
+}
+
 function renderPageMeta($options = []) {
     $title = $options['title'] ?? APP_NAME;
     $description = $options['description'] ?? 'A polished silent auction experience for generous bidders, trusted nonprofits, and joyful fundraising events.';
@@ -53,7 +67,7 @@ function renderPageMeta($options = []) {
     <link rel="manifest" href="site.webmanifest">
     <meta name="theme-color" content="#172235">
     <?php foreach ($stylesheets as $stylesheet): ?>
-        <link rel="stylesheet" href="<?php echo htmlspecialchars($stylesheet); ?>">
+        <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrlWithVersion($stylesheet)); ?>">
     <?php endforeach; ?>
     <?php
 }
