@@ -62,6 +62,7 @@ $query = "SELECT
             u.id,
             u.full_name,
             {$email_select},
+            u.phone_number,
             CONCAT(SUBSTR(u.phone_number, 1, 6), '...', SUBSTR(u.phone_number, -4)) as phone_display,
             COUNT(DISTINCT b.id) as bid_count,
             MAX(b.created_at) as last_bid_at

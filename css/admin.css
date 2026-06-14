@@ -408,6 +408,21 @@
     min-width: 0;
 }
 
+.admin-contact-link {
+    color: #3557d4;
+    font-weight: 650;
+    text-decoration: underline;
+    text-underline-offset: 0.16em;
+}
+
+.admin-contact-link:hover {
+    color: #243c9f;
+}
+
+.text-muted {
+    color: #777;
+}
+
 /* Filter Group */
 .filter-group {
     background: white;

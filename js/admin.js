@@ -825,8 +825,8 @@ const AdminDashboard = {
 
             html += `<tr>
                 <td>${this.escapeHtml(user.full_name || '-')}</td>
-                <td>${this.escapeHtml(user.phone_display || '-')}</td>
-                <td>${this.escapeHtml(user.email || '-')}</td>
+                <td>${this.renderPhoneLink(user.phone_number, user.phone_display)}</td>
+                <td>${this.renderEmailLink(user.email)}</td>
                 <td>${parseInt(user.bid_count || 0, 10)}</td>
                 <td>${parseInt(user.items_won || 0, 10)}</td>
                 <td>$${this.formatCurrency(user.total_spent)}</td>
@@ -1006,8 +1006,8 @@ const AdminDashboard = {
                 let html = '<div class="user-details">';
                 html += '<h3>User Information</h3>';
                 html += '<p><strong>Name:</strong> ' + this.escapeHtml(user.full_name) + '</p>';
-                html += '<p><strong>Phone:</strong> ' + user.phone_display + '</p>';
-                html += '<p><strong>Email:</strong> ' + this.escapeHtml(user.email || 'Not provided') + '</p>';
+                html += '<p><strong>Phone:</strong> ' + this.renderPhoneLink(user.phone_number, user.phone_display) + '</p>';
+                html += '<p><strong>Email:</strong> ' + this.renderEmailLink(user.email) + '</p>';
                 html += '<p><strong>Member Since:</strong> ' + new Date(user.created_at).toLocaleDateString() + '</p>';
 
                 if (data.wins.length > 0) {
@@ -1654,6 +1654,24 @@ const AdminDashboard = {
         return phone;
     },
 
+    renderPhoneLink(phone, displayText = '') {
+        const rawPhone = String(phone || '').trim();
+        if (!rawPhone) return '<span class="text-muted">Not provided</span>';
+
+        const digits = rawPhone.replace(/\D/g, '');
+        const telNumber = digits.length === 10 ? '+1' + digits : rawPhone.replace(/[^\d+]/g, '');
+        const label = displayText || this.formatPhoneNumber(rawPhone);
+
+        return `<a class="admin-contact-link" href="tel:${this.escapeHtml(telNumber)}">${this.escapeHtml(label)}</a>`;
+    },
+
+    renderEmailLink(email) {
+        const cleanEmail = String(email || '').trim();
+        if (!cleanEmail) return '<span class="text-muted">Not provided</span>';
+
+        return `<a class="admin-contact-link" href="mailto:${this.escapeHtml(cleanEmail)}">${this.escapeHtml(cleanEmail)}</a>`;
+    },
+
     escapeHtml(text) {
         const map = {
             '&': '&amp;',
@@ -1807,7 +1825,7 @@ const AdminDashboard = {
 
                 html += `<tr style="border-bottom: 1px solid #eee; background: ${bgColor};">`;
                 html += `<td style="padding: 1rem;"><strong>${this.escapeHtml(user.full_name)}</strong></td>`;
-                html += `<td style="padding: 1rem; font-family: monospace; font-size: 0.9rem;">${this.escapeHtml(user.phone_number)}</td>`;
+                html += `<td style="padding: 1rem; font-family: monospace; font-size: 0.9rem;">${this.renderPhoneLink(user.phone_number)}</td>`;
                 html += `<td style="padding: 1rem; font-size: 0.85rem; color: #666;">${this.escapeHtml(user.stripe_customer_id || '-')}</td>`;
                 html += `<td style="padding: 1rem; font-size: 0.9rem;">${joined}</td>`;
                 html += `<td style="padding: 1rem; text-align: center;"><button class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="AdminDashboard.viewUserDetails(${user.id})">View</button></td>`;
