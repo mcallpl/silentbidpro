@@ -189,7 +189,10 @@ $page_title = APP_NAME . ' — Admin Dashboard';
 
             <!-- Users Section -->
             <section id="usersSection" class="admin-section">
-                <h2>Bidders & Users</h2>
+                <div class="section-title-row">
+                    <h2>Bidders & Users</h2>
+                    <button type="button" id="createUserBtn" class="btn btn-primary btn-small">Create Bidder</button>
+                </div>
 
                 <!-- Search -->
                 <div class="filter-group">
@@ -398,6 +401,40 @@ $page_title = APP_NAME . ' — Admin Dashboard';
             <div id="userModalBody" class="modal-body">
                 <p class="loading">Loading user details...</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Bidder Modal -->
+    <div id="userEditModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="userEditModalTitle">Create Bidder</h2>
+                <button class="modal-close" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="userEditForm" class="admin-form">
+                <div class="form-group">
+                    <label class="form-label" for="userFullNameInput">Name *</label>
+                    <input type="text" id="userFullNameInput" name="full_name" class="form-input" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userPhoneInput">Phone *</label>
+                    <input type="tel" id="userPhoneInput" name="phone_number" class="form-input" placeholder="(555) 123-4567" required />
+                    <p class="form-hint">Phone numbers are normalized for bidder sign-in.</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userEmailInput">Email</label>
+                    <input type="email" id="userEmailInput" name="email" class="form-input" placeholder="bidder@example.org" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userStripeInput">Stripe Customer ID</label>
+                    <input type="text" id="userStripeInput" name="stripe_customer_id" class="form-input" />
+                </div>
+                <div id="userEditError" class="error-message" style="display: none;"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Bidder</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 

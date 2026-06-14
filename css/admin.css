@@ -119,6 +119,18 @@
     display: block;
 }
 
+.section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.section-title-row h2 {
+    margin: 0;
+}
+
 .admin-section h2 {
     margin-top: 0;
     color: #333;
@@ -383,8 +395,17 @@
 
 .form-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
     margin-top: 1rem;
+}
+
+.admin-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    justify-content: flex-start;
+    min-width: 0;
 }
 
 /* Filter Group */
@@ -574,6 +595,17 @@
     font-size: 0.85rem;
 }
 
+.btn-danger {
+    background: #b42318;
+    color: white;
+    border: 1px solid #b42318;
+}
+
+.btn-danger:hover {
+    background: #912018;
+    border-color: #912018;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .admin-header {
@@ -606,6 +638,15 @@
     .filter-group {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .section-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .admin-row-actions {
+        min-width: 8rem;
     }
 
     .modal-content {

@@ -813,7 +813,7 @@ const AdminDashboard = {
         const container = document.getElementById('usersContainer');
 
         if (users.length === 0) {
-            container.innerHTML = '<p class="empty-state">No users yet</p>';
+            container.innerHTML = '<p class="empty-state">No bidders yet</p>';
             return;
         }
 
@@ -821,17 +821,22 @@ const AdminDashboard = {
 
         users.forEach(user => {
             const lastBid = user.last_bid_at ? new Date(user.last_bid_at).toLocaleTimeString() : '-';
+            const bidderName = this.escapeHtml(user.full_name || 'this bidder');
 
             html += `<tr>
-                <td>${this.escapeHtml(user.full_name)}</td>
-                <td>${user.phone_display}</td>
+                <td>${this.escapeHtml(user.full_name || '-')}</td>
+                <td>${this.escapeHtml(user.phone_display || '-')}</td>
                 <td>${this.escapeHtml(user.email || '-')}</td>
-                <td>${user.bid_count}</td>
-                <td>${user.items_won}</td>
+                <td>${parseInt(user.bid_count || 0, 10)}</td>
+                <td>${parseInt(user.items_won || 0, 10)}</td>
                 <td>$${this.formatCurrency(user.total_spent)}</td>
                 <td>${lastBid}</td>
                 <td>
-                    <button class="btn btn-small btn-secondary view-user" data-id="${user.id}">View</button>
+                    <div class="admin-row-actions">
+                        <button class="btn btn-small btn-secondary view-user" data-id="${user.id}">View</button>
+                        <button class="btn btn-small btn-secondary edit-user" data-id="${user.id}">Edit</button>
+                        <button class="btn btn-small btn-danger delete-user" data-id="${user.id}" data-name="${bidderName}">Delete</button>
+                    </div>
                 </td>
             </tr>`;
         });
@@ -843,6 +848,142 @@ const AdminDashboard = {
         container.querySelectorAll('.view-user').forEach(btn => {
             btn.addEventListener('click', () => this.viewUserDetails(btn.dataset.id));
         });
+        container.querySelectorAll('.edit-user').forEach(btn => {
+            btn.addEventListener('click', () => this.showEditUserForm(btn.dataset.id));
+        });
+        container.querySelectorAll('.delete-user').forEach(btn => {
+            btn.addEventListener('click', () => this.deleteUser(btn.dataset.id, btn.dataset.name));
+        });
+    },
+
+    getUserSearchValue() {
+        return document.getElementById('userSearchInput')?.value.trim() || '';
+    },
+
+    resetUserEditForm() {
+        const form = document.getElementById('userEditForm');
+        const errorDiv = document.getElementById('userEditError');
+
+        form.reset();
+        form.dataset.userId = '';
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
+    },
+
+    showCreateUserForm() {
+        this.resetUserEditForm();
+        document.getElementById('userEditModalTitle').textContent = 'Create Bidder';
+        document.getElementById('userEditModal').style.display = 'block';
+        document.getElementById('userFullNameInput')?.focus();
+    },
+
+    async showEditUserForm(userId) {
+        const modal = document.getElementById('userEditModal');
+        const form = document.getElementById('userEditForm');
+        const errorDiv = document.getElementById('userEditError');
+
+        this.resetUserEditForm();
+        document.getElementById('userEditModalTitle').textContent = 'Edit Bidder';
+        modal.style.display = 'block';
+        errorDiv.textContent = 'Loading bidder...';
+        errorDiv.style.display = 'block';
+
+        try {
+            const response = await fetch(this.config.apiBaseUrl + '/crud-users.php?action=get&user_id=' + encodeURIComponent(userId), {
+                method: 'GET',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+            const data = await response.json();
+
+            if (!response.ok || data.status !== 'ok') {
+                throw new Error(data.message || 'Could not load bidder');
+            }
+
+            const user = data.data;
+            form.dataset.userId = user.id;
+            document.getElementById('userFullNameInput').value = user.full_name || '';
+            document.getElementById('userPhoneInput').value = this.formatPhoneNumber(user.phone_number || '');
+            document.getElementById('userEmailInput').value = user.email || '';
+            document.getElementById('userStripeInput').value = user.stripe_customer_id || '';
+            errorDiv.style.display = 'none';
+            document.getElementById('userFullNameInput')?.focus();
+        } catch (error) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+        }
+    },
+
+    async handleUserFormSubmit(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const errorDiv = document.getElementById('userEditError');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const userId = form.dataset.userId;
+        const formData = new FormData(form);
+        const payload = {
+            full_name: (formData.get('full_name') || '').trim(),
+            phone_number: (formData.get('phone_number') || '').trim(),
+            email: (formData.get('email') || '').trim(),
+            stripe_customer_id: (formData.get('stripe_customer_id') || '').trim()
+        };
+
+        errorDiv.style.display = 'none';
+        submitBtn.disabled = true;
+
+        try {
+            const action = userId ? 'update&user_id=' + encodeURIComponent(userId) : 'create';
+            const response = await fetch(this.config.apiBaseUrl + '/crud-users.php?action=' + action, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok || data.status !== 'ok') {
+                throw new Error(data.message || 'Could not save bidder');
+            }
+
+            document.getElementById('userEditModal').style.display = 'none';
+            this.showToast(userId ? 'Bidder updated' : 'Bidder created', 'success');
+            this.loadUsers(this.state.currentPage.users || 1, this.getUserSearchValue());
+            if (this.state.currentSection === 'admins') {
+                this.loadUsersManagement();
+            }
+        } catch (error) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+        }
+    },
+
+    async deleteUser(userId, userName) {
+        const confirmed = window.confirm('Delete ' + userName + '? This removes their bidder sign-in record. If they have protected auction history, Silent Bid Buddy will keep the record and tell you why.');
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(this.config.apiBaseUrl + '/crud-users.php?action=delete&user_id=' + encodeURIComponent(userId), {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+            const data = await response.json();
+
+            if (!response.ok || data.status !== 'ok') {
+                throw new Error(data.message || 'Could not delete bidder');
+            }
+
+            this.showToast('Bidder deleted', 'success');
+            this.loadUsers(this.state.currentPage.users || 1, this.getUserSearchValue());
+            if (this.state.currentSection === 'admins') {
+                this.loadUsersManagement();
+            }
+        } catch (error) {
+            this.showToast(error.message, 'error');
+        }
     },
 
     async viewUserDetails(userId) {
@@ -1124,6 +1265,14 @@ const AdminDashboard = {
         // Close auctions button
         document.getElementById('closeAuctionsBtn')?.addEventListener('click', () => {
             this.closeExpiredAuctions();
+        });
+
+        document.getElementById('createUserBtn')?.addEventListener('click', () => {
+            this.showCreateUserForm();
+        });
+
+        document.getElementById('userEditForm')?.addEventListener('submit', (e) => {
+            this.handleUserFormSubmit(e);
         });
     },
 

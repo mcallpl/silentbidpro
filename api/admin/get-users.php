@@ -32,18 +32,26 @@ $where = "1=1";
 $params = [];
 
 if (!empty($search)) {
-    $where .= " AND (full_name LIKE ? OR phone_number LIKE ?)";
+    $where .= $has_email_column
+        ? " AND (u.full_name LIKE ? OR u.phone_number LIKE ? OR u.email LIKE ?)"
+        : " AND (u.full_name LIKE ? OR u.phone_number LIKE ?)";
     $search_term = '%' . $search . '%';
     $params[] = $search_term;
     $params[] = $search_term;
+    if ($has_email_column) {
+        $params[] = $search_term;
+    }
 }
 
 // Get total count
 if (!empty($search)) {
-    $total = dbGetRow(
-        "SELECT COUNT(*) as count FROM users WHERE full_name LIKE ? OR phone_number LIKE ?",
-        ['%' . $search . '%', '%' . $search . '%']
-    )['count'];
+    $count_params = ['%' . $search . '%', '%' . $search . '%'];
+    $count_where = "full_name LIKE ? OR phone_number LIKE ?";
+    if ($has_email_column) {
+        $count_where .= " OR email LIKE ?";
+        $count_params[] = '%' . $search . '%';
+    }
+    $total = dbGetRow("SELECT COUNT(*) as count FROM users WHERE {$count_where}", $count_params)['count'];
 } else {
     $total = dbCount('users');
 }
