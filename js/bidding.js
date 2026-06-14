@@ -157,7 +157,7 @@ SBB.Bidding = {
     },
 
     quickBid() {
-        const nextMinimum = window.SBB.currentHighBid > 0
+        const nextMinimum = window.SBB.hasBids && window.SBB.currentHighBid > 0
             ? window.SBB.currentHighBid + window.SBB.minIncrement
             : window.SBB.startingBid;
 
@@ -244,10 +244,16 @@ SBB.Bidding = {
     updateItemDisplay(bidResponse) {
         // Update current high bid
         window.SBB.currentHighBid = parseFloat(bidResponse.new_high_bid);
+        window.SBB.hasBids = true;
 
         const currentBidAmount = document.querySelector('.current-bid-amount');
         if (currentBidAmount) {
             currentBidAmount.textContent = SBB.Utils.formatCurrency(bidResponse.new_high_bid);
+        }
+
+        const bidHeader = document.querySelector('.bid-header');
+        if (bidHeader) {
+            bidHeader.textContent = 'Current High Bid';
         }
 
         // Update next minimum
@@ -260,6 +266,11 @@ SBB.Bidding = {
         const quickBidBtn = document.querySelector('.quick-bid-amount');
         if (quickBidBtn) {
             quickBidBtn.textContent = SBB.Utils.formatCurrency(bidResponse.next_minimum);
+        }
+
+        const quickBidLabel = document.querySelector('.quick-bid-label');
+        if (quickBidLabel) {
+            quickBidLabel.textContent = 'Quick Bid';
         }
 
         // Update bidder status

@@ -26,6 +26,7 @@ $has_favorites = favoritesAvailable();
 $close_expr = $has_event_columns ? "COALESCE(i.close_time_override, i.auction_end_time)" : "i.auction_end_time";
 $select_fields = "i.id, i.item_number, i.title, i.description, i.image_url, i.fair_market_value,
         i.starting_bid, i.current_high_bid, i.auction_end_time, i.is_closed,
+        (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS bid_count,
         TIMESTAMPDIFF(SECOND, NOW(), {$close_expr}) as time_remaining";
 
 if ($has_event_columns) {
@@ -186,9 +187,10 @@ $page_title = $event_name . ' - ' . APP_NAME;
                                 <!-- Bid Info -->
                                 <div class="item-card-bid-info">
                                     <div class="bid-stat">
-                                        <span class="label">Current Bid:</span>
+                                        <?php $card_has_bids = (int)($item['bid_count'] ?? 0) > 0 && (float)$item['current_high_bid'] > 0; ?>
+                                        <span class="label"><?php echo $card_has_bids ? 'Current Bid:' : 'Opening Bid:'; ?></span>
                                         <span class="value">
-                                            $<?php echo number_format(max($item['current_high_bid'], $item['starting_bid']), 2); ?>
+                                            $<?php echo number_format($card_has_bids ? (float)$item['current_high_bid'] : (float)$item['starting_bid'], 2); ?>
                                         </span>
                                     </div>
 

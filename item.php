@@ -26,7 +26,8 @@ if (!$item_num) {
 $item = dbGetRow(
     "SELECT id, item_number, title, description, image_url, fair_market_value,
             starting_bid, min_increment, buy_now_price, current_high_bid,
-            auction_end_time, is_closed
+            current_high_bidder_id, auction_end_time, is_closed,
+            (SELECT COUNT(*) FROM bids b WHERE b.item_id = items.id) AS bid_count
      FROM items WHERE item_number = ? OR id = ? LIMIT 1",
     [(int)$item_num, (int)$item_num]
 );
@@ -60,7 +61,12 @@ if (!$is_authenticated) {
         }
     }
 }
-$is_user_winning = $is_authenticated && $item['current_high_bidder_id'] == $user['id'];
+$has_bids = (int)($item['bid_count'] ?? 0) > 0 && (float)$item['current_high_bid'] > 0 && !empty($item['current_high_bidder_id']);
+$is_user_winning = $has_bids && $is_authenticated && (int)$item['current_high_bidder_id'] === (int)$user['id'];
+$display_bid_amount = $has_bids ? (float)$item['current_high_bid'] : (float)$item['starting_bid'];
+$next_bid_amount = $has_bids
+    ? (float)$item['current_high_bid'] + (float)$item['min_increment']
+    : (float)$item['starting_bid'];
 $time_remaining = strtotime($item['auction_end_time']) - time();
 $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
 $has_favorites = favoritesAvailable();
@@ -124,18 +130,20 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
 
         <!-- Current Bid Block (Highlighted) -->
         <section class="bid-block highlight">
-            <div class="bid-header">Current High Bid</div>
+            <div class="bid-header"><?php echo $has_bids ? 'Current High Bid' : 'Opening Bid'; ?></div>
             <div class="current-bid-amount">
-                $<?php echo number_format(max($item['current_high_bid'], $item['starting_bid']), 2); ?>
+                $<?php echo number_format($display_bid_amount, 2); ?>
             </div>
             <div class="next-minimum-bid">
-                Next minimum: $<?php echo number_format($item['current_high_bid'] > 0 ? $item['current_high_bid'] + $item['min_increment'] : $item['starting_bid'], 2); ?>
+                <?php echo $has_bids ? 'Next minimum' : 'First bid'; ?>: $<?php echo number_format($next_bid_amount, 2); ?>
             </div>
             <div class="bidder-status">
-                <?php if ($is_user_winning): ?>
+                <?php if (!$has_bids): ?>
+                    <span class="bidder-name">No bids yet. Be the first.</span>
+                <?php elseif ($is_user_winning): ?>
                     <span class="badge badge-winning">You're Winning! 🏆</span>
                 <?php else: ?>
-                    <span class="bidder-name">Bid by Someone Else</span>
+                    <span class="bidder-name">Another bidder is currently leading</span>
                 <?php endif; ?>
             </div>
         </section>
@@ -166,7 +174,8 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
                 <?php else: ?>
                     <!-- Quick Bid Button -->
                     <button id="quickBidBtn" class="btn btn-primary btn-large btn-quick-bid">
-                        Quick Bid <span class="quick-bid-amount">$<?php echo number_format($item['current_high_bid'] > 0 ? $item['current_high_bid'] + $item['min_increment'] : $item['starting_bid'], 2); ?></span>
+                        <span class="quick-bid-label"><?php echo $has_bids ? 'Quick Bid' : 'Place First Bid'; ?></span>
+                        <span class="quick-bid-amount">$<?php echo number_format($next_bid_amount, 2); ?></span>
                     </button>
 
                     <!-- Custom/Max Bid Section -->
@@ -236,6 +245,7 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
         window.SBB.isAuthenticated = <?php echo $is_authenticated ? 'true' : 'false'; ?>;
         window.SBB.auctionEndTime = '<?php echo $item['auction_end_time']; ?>';
         window.SBB.currentHighBid = <?php echo (float)$item['current_high_bid']; ?>;
+        window.SBB.hasBids = <?php echo $has_bids ? 'true' : 'false'; ?>;
         window.SBB.minIncrement = <?php echo (float)$item['min_increment']; ?>;
         window.SBB.startingBid = <?php echo (float)$item['starting_bid']; ?>;
         window.SBB.isAuctionOpen = <?php echo $is_auction_open ? 'true' : 'false'; ?>;
