@@ -205,6 +205,37 @@ function dbExists($table, $where, $params = []) {
 }
 
 /**
+ * Check whether a table column exists in the configured database.
+ * @param string $table Table name
+ * @param string $column Column name
+ * @return bool
+ */
+function dbColumnExists($table, $column) {
+    return dbGetRow(
+        "SELECT 1
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
+         LIMIT 1",
+        [DB_NAME, $table, $column]
+    ) !== null;
+}
+
+/**
+ * Check whether a table exists in the configured database.
+ * @param string $table Table name
+ * @return bool
+ */
+function dbTableExists($table) {
+    return dbGetRow(
+        "SELECT 1
+         FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+         LIMIT 1",
+        [DB_NAME, $table]
+    ) !== null;
+}
+
+/**
  * Count records with conditions
  * @param string $table Table name
  * @param string $where Optional WHERE clause
@@ -219,4 +250,3 @@ function dbCount($table, $where = '', $params = []) {
     $count = dbGetValue($sql, $params);
     return (int)($count ?? 0);
 }
-

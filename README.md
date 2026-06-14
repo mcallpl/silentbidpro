@@ -18,9 +18,14 @@ An elegant, mobile-first silent auction platform built for upscale nonprofit gal
 
 💰 **Frictionless Bidding**
 - One-tap quick bidding at minimum increment
-- Proxy bidding with automatic incremental bids
+- Max bidding with automatic incremental bids
 - Anti-sniping "popcorn bidding" extends auctions
 - Real-time outbid SMS alerts
+
+🖼️ **Professional Item Presentation**
+- Premium generated demo item imagery for catalogs and item cards
+- Rich donor-facing item descriptions
+- Seed data for polished auction demos and PDF/template QA
 
 💳 **Payment Processing**
 - Stripe Checkout integration for secure payments
@@ -89,6 +94,13 @@ An elegant, mobile-first silent auction platform built for upscale nonprofit gal
 2. **Create database:**
    ```bash
    mysql -u mcallpl -p amazing123 < sql/schema.sql
+   ```
+
+   To load the newer event foundation and premium demo items:
+   ```bash
+   mysql -u mcallpl -p amazing123 silentbidbuddy < sql/migrations/001_event_foundation.sql
+   mysql -u mcallpl -p amazing123 silentbidbuddy < sql/migrations/002_favorites.sql
+   mysql -u mcallpl -p amazing123 silentbidbuddy < sql/seeds/001_premium_test_items.sql
    ```
 
 3. **Add credentials to vault:**

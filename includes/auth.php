@@ -41,10 +41,12 @@ function validateSessionToken($token) {
         return false;
     }
 
+    $user_email_select = dbColumnExists('users', 'email') ? ', u.email' : '';
+
     // Fetch session record - check if token exists and is not expired
     // Sessions expire after 30 days (SESSION_LIFETIME = 30 * 24 * 60 * 60)
     $session = dbGetRow(
-        "SELECT s.user_id, s.expires_at, u.id, u.phone_number, u.full_name, u.stripe_customer_id
+        "SELECT s.user_id, s.expires_at, u.id, u.phone_number, u.full_name, u.stripe_customer_id {$user_email_select}
          FROM sessions s
          JOIN users u ON u.id = s.user_id
          WHERE s.session_token = ? AND s.expires_at > NOW()",
@@ -60,6 +62,7 @@ function validateSessionToken($token) {
         'id' => $session['user_id'],
         'phone_number' => $session['phone_number'],
         'full_name' => $session['full_name'],
+        'email' => $session['email'] ?? '',
         'stripe_customer_id' => $session['stripe_customer_id']
     ];
 }
@@ -219,9 +222,12 @@ function destroySession($token) {
  * Get or create user by phone number
  * @param string $phone Normalized phone number
  * @param string $full_name Optional name
+ * @param string $email Optional email address
  * @return int User ID
  */
-function getOrCreateUser($phone, $full_name = '') {
+function getOrCreateUser($phone, $full_name = '', $email = '') {
+    $has_email_column = dbColumnExists('users', 'email');
+
     // Check if user exists
     $user = dbGetRow(
         "SELECT id FROM users WHERE phone_number = ?",
@@ -229,8 +235,13 @@ function getOrCreateUser($phone, $full_name = '') {
     );
 
     if ($user) {
-        // Update name if provided (allows users to update their name on re-login)
-        if (!empty($full_name)) {
+        // Update profile info if provided (allows users to fix details on re-login)
+        if ($has_email_column && !empty($email)) {
+            dbUpdate(
+                "UPDATE users SET full_name = ?, email = ? WHERE id = ?",
+                [$full_name, $email, (int)$user['id']]
+            );
+        } elseif (!empty($full_name)) {
             dbUpdate(
                 "UPDATE users SET full_name = ? WHERE id = ?",
                 [$full_name, (int)$user['id']]
@@ -240,6 +251,13 @@ function getOrCreateUser($phone, $full_name = '') {
     }
 
     // Create new user
+    if ($has_email_column) {
+        return dbInsert(
+            "INSERT INTO users (phone_number, full_name, email) VALUES (?, ?, ?)",
+            [$phone, $full_name, $email]
+        );
+    }
+
     return dbInsert(
         "INSERT INTO users (phone_number, full_name) VALUES (?, ?)",
         [$phone, $full_name]

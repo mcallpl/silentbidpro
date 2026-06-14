@@ -66,6 +66,18 @@ $page_title = APP_NAME . ' - Bid Now';
                     />
                 </div>
 
+                <div class="form-group">
+                    <label for="emailInput" class="form-label">Email <span class="optional">(optional)</span></label>
+                    <input
+                        type="email"
+                        id="emailInput"
+                        class="form-input"
+                        placeholder="you@example.org"
+                        autocomplete="email"
+                    />
+                    <p class="form-hint">Used for receipts and auction updates.</p>
+                </div>
+
                 <button id="sendCodeBtn" class="btn btn-primary btn-large">
                     <span class="btn-text">Send Verification Code</span>
                     <span class="btn-spinner" style="display: none;">Sending...</span>

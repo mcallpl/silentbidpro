@@ -27,10 +27,16 @@ if (!$input) {
 $phone = $input['phone'] ?? '';
 $code = $input['code'] ?? '';
 $full_name = $input['full_name'] ?? '';
+$email = trim($input['email'] ?? '');
 
 if (empty($phone) || empty($code) || empty($full_name)) {
     http_response_code(400);
     die(json_encode(['status' => 'error', 'message' => 'Phone, name, and code are required']));
+}
+
+if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    http_response_code(400);
+    die(json_encode(['status' => 'error', 'message' => 'Please enter a valid email address or leave it blank']));
 }
 
 // Normalize phone
@@ -50,7 +56,7 @@ if (!verifyCode($normalized_phone, $code)) {
 }
 
 // Get or create user
-$user_id = getOrCreateUser($normalized_phone, $full_name);
+$user_id = getOrCreateUser($normalized_phone, $full_name, $email);
 
 if (!$user_id) {
     http_response_code(500);
@@ -94,10 +100,10 @@ if (PHP_VERSION_ID >= 70300) {
 
 
 // Get user data
-$user = dbGetRow(
-    "SELECT id, phone_number, full_name FROM users WHERE id = ?",
-    [(int)$user_id]
-);
+$user_fields = dbColumnExists('users', 'email')
+    ? "id, phone_number, full_name, email"
+    : "id, phone_number, full_name";
+$user = dbGetRow("SELECT {$user_fields} FROM users WHERE id = ?", [(int)$user_id]);
 
 // Log audit event
 dbInsert(
@@ -114,7 +120,8 @@ echo json_encode([
     'user' => [
         'id' => $user['id'],
         'phone_number' => $user['phone_number'],
-        'full_name' => $user['full_name']
+        'full_name' => $user['full_name'],
+        'email' => $user['email'] ?? ''
     ]
 ]);
 

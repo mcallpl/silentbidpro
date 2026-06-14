@@ -12,6 +12,7 @@ header('Expires: 0');
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db-helpers.php';
+require_once __DIR__ . '/includes/favorites.php';
 
 // Get item ID from URL
 $item_num = $_GET['id'] ?? 0;
@@ -54,6 +55,8 @@ if (!$is_authenticated) {
 $is_user_winning = $is_authenticated && $item['current_high_bidder_id'] == $user['id'];
 $time_remaining = strtotime($item['auction_end_time']) - time();
 $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
+$has_favorites = favoritesAvailable();
+$is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$user['id'], (int)$item['id']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -91,6 +94,19 @@ $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
 
         <!-- Item Info -->
         <section class="item-info">
+            <div class="item-title-row">
+                <span class="lot-pill">Lot <?php echo (int)$item['item_number']; ?></span>
+                <?php if ($is_authenticated && $has_favorites): ?>
+                    <button
+                        type="button"
+                        class="btn btn-secondary btn-watch js-watch-item <?php echo $is_favorited ? 'is-active' : ''; ?>"
+                        data-item-id="<?php echo (int)$item['id']; ?>"
+                        aria-pressed="<?php echo $is_favorited ? 'true' : 'false'; ?>"
+                    >
+                        <?php echo $is_favorited ? 'Watching' : 'Watch'; ?>
+                    </button>
+                <?php endif; ?>
+            </div>
             <h1 class="item-title"><?php echo htmlspecialchars($item['title']); ?></h1>
             <p class="item-description">
                 <?php echo htmlspecialchars($item['description']); ?>
@@ -149,16 +165,16 @@ $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
                         Quick Bid <span class="quick-bid-amount">$<?php echo number_format($item['current_high_bid'] > 0 ? $item['current_high_bid'] + $item['min_increment'] : $item['starting_bid'], 2); ?></span>
                     </button>
 
-                    <!-- Custom/Proxy Bid Section -->
+                    <!-- Custom/Max Bid Section -->
                     <div class="custom-bid-section">
-                        <button class="toggle-custom-bid">+ Custom or Proxy Bid</button>
+                        <button class="toggle-custom-bid">+ Custom or Max Bid</button>
                         <form id="customBidForm" class="custom-bid-form" style="display: none;">
                             <div class="form-group">
                                 <label for="customAmount">Bid Amount</label>
                                 <input type="number" id="customAmount" step="0.01" min="0" required />
                             </div>
                             <div class="form-group">
-                                <label for="maxAmount">Max Bid (Optional - for proxy bidding)</label>
+                                <label for="maxAmount">Maximum you'll pay (optional)</label>
                                 <input type="number" id="maxAmount" step="0.01" min="0" />
                             </div>
                             <button type="submit" class="btn btn-primary">Place Custom Bid</button>
@@ -190,6 +206,9 @@ $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
         <!-- Navigation -->
         <section class="navigation-section">
             <a href="items.php" class="btn btn-secondary">View All Items</a>
+            <?php if ($is_authenticated): ?>
+                <a href="my-bids.php" class="btn btn-secondary">My Bids</a>
+            <?php endif; ?>
         </section>
     </div>
 
@@ -231,6 +250,33 @@ $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
     </script>
     <script src="js/bidding.js"></script>
     <script>
+        document.querySelectorAll('.js-watch-item').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const itemId = parseInt(button.dataset.itemId, 10);
+                const nextState = button.getAttribute('aria-pressed') !== 'true';
+                button.disabled = true;
+
+                try {
+                    const response = await SBB.API.post('/api/bidding/toggle-favorite.php', {
+                        item_id: itemId,
+                        favorite: nextState
+                    });
+
+                    if (response.status === 'ok') {
+                        button.classList.toggle('is-active', response.is_favorited);
+                        button.setAttribute('aria-pressed', response.is_favorited ? 'true' : 'false');
+                        button.textContent = response.is_favorited ? 'Watching' : 'Watch';
+                    } else {
+                        alert(response.message || 'Could not update watchlist');
+                    }
+                } catch (err) {
+                    alert('Network error. Please try again.');
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
         // CRITICAL: Initialize the bidding system when page loads
         if (window.SBB && window.SBB.Bidding) {
             window.SBB.Bidding.init();

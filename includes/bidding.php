@@ -34,6 +34,61 @@ function calculateNextBid($current_high_bid, $min_increment) {
 }
 
 /**
+ * Round bid money to two decimals.
+ * @param float $amount
+ * @return float
+ */
+function normalizeBidMoney($amount) {
+    return round((float)$amount, 2);
+}
+
+/**
+ * Get the active high bidder's max/proxy ceiling for an item.
+ * Falls back to the visible high bid when no max bid exists.
+ * @param int $item_id Item ID
+ * @param int|null $high_bidder_id Current high bidder ID
+ * @param float $current_high_bid Current visible high bid
+ * @return float
+ */
+function getHighBidderCeiling($item_id, $high_bidder_id, $current_high_bid) {
+    if (!$high_bidder_id) {
+        return normalizeBidMoney($current_high_bid);
+    }
+
+    $ceiling = dbGetValue(
+        "SELECT MAX(COALESCE(max_bid_amount, bid_amount))
+         FROM bids
+         WHERE item_id = ? AND user_id = ?",
+        [(int)$item_id, (int)$high_bidder_id]
+    );
+
+    return normalizeBidMoney(max((float)($ceiling ?? 0), (float)$current_high_bid));
+}
+
+/**
+ * Update item bid state, optionally extending the auction.
+ * @param int $item_id Item ID
+ * @param float $new_high_bid New visible high bid
+ * @param int $new_high_bidder_id New high bidder
+ * @param string|null $new_end_time New end time if anti-sniping applies
+ * @return bool
+ */
+function updateItemBidState($item_id, $new_high_bid, $new_high_bidder_id, $new_end_time = null) {
+    if ($new_end_time) {
+        return (bool)dbUpdate(
+            "UPDATE items SET current_high_bid = ?, current_high_bidder_id = ?,
+                    auction_end_time = ? WHERE id = ?",
+            [normalizeBidMoney($new_high_bid), (int)$new_high_bidder_id, $new_end_time, (int)$item_id]
+        );
+    }
+
+    return (bool)dbUpdate(
+        "UPDATE items SET current_high_bid = ?, current_high_bidder_id = ? WHERE id = ?",
+        [normalizeBidMoney($new_high_bid), (int)$new_high_bidder_id, (int)$item_id]
+    );
+}
+
+/**
  * Check if bid is valid and meets minimum requirements
  * @param float $bid_amount Proposed bid amount
  * @param float $current_high_bid Current high bid
@@ -104,27 +159,86 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
         return ['status' => 'error', 'message' => $validation['message']];
     }
 
+    $bid_amount = normalizeBidMoney($bid_amount);
+    $max_bid_amount = $max_bid_amount !== null ? normalizeBidMoney($max_bid_amount) : null;
+    $user_ceiling = $max_bid_amount !== null ? $max_bid_amount : $bid_amount;
+
     // Validate max_bid if provided
     if ($max_bid_amount !== null && $max_bid_amount < $bid_amount) {
         return ['status' => 'error', 'message' => 'Max bid must be >= current bid'];
     }
 
     $previous_high_bidder_id = $item['current_high_bidder_id'];
+    $current_high_bid = normalizeBidMoney((float)$item['current_high_bid']);
+    $min_increment = normalizeBidMoney((float)$item['min_increment']);
+    $is_first_bid = $current_high_bid <= 0;
+    $incumbent_ceiling = getHighBidderCeiling($item_id, $previous_high_bidder_id, $current_high_bid);
 
-    // Insert bid record
+    $new_high_bidder_id = (int)$user_id;
+    $new_high_bid = $bid_amount;
+    $proxy_bid_id = null;
+    $was_proxy_applied = false;
+    $is_user_winning_after_bid = true;
+    $proxy_message = '';
+
+    if ($is_first_bid) {
+        $new_high_bid = $bid_amount;
+    } elseif ((int)$previous_high_bidder_id === (int)$user_id) {
+        // Existing winner is increasing or confirming their max. Keep visible price stable.
+        $new_high_bidder_id = (int)$user_id;
+        $new_high_bid = $current_high_bid;
+        $proxy_message = 'Your max bid was updated.';
+    } elseif ($previous_high_bidder_id) {
+        if ($user_ceiling > $incumbent_ceiling) {
+            // New bidder wins, paying one increment above the incumbent ceiling when needed.
+            $new_high_bidder_id = (int)$user_id;
+            $new_high_bid = normalizeBidMoney(max($bid_amount, min($user_ceiling, $incumbent_ceiling + $min_increment)));
+            $was_proxy_applied = $new_high_bid > $bid_amount;
+            $proxy_message = $was_proxy_applied
+                ? 'Your max bid took the lead automatically.'
+                : '';
+        } else {
+            // Incumbent stays ahead through their stored max bid.
+            $new_high_bidder_id = (int)$previous_high_bidder_id;
+            $new_high_bid = normalizeBidMoney(min($incumbent_ceiling, $user_ceiling + $min_increment));
+            $is_user_winning_after_bid = false;
+            $was_proxy_applied = true;
+            $proxy_message = $user_ceiling === $incumbent_ceiling
+                ? 'Another bidder reached that max first, so they are still winning.'
+                : 'Another bidder has a higher max bid and is still winning.';
+        }
+    }
+
+    // Insert the visible bid record for the bidder.
+    $visible_user_bid = $is_user_winning_after_bid ? $new_high_bid : $user_ceiling;
     $bid_id = dbInsert(
         "INSERT INTO bids (item_id, user_id, bid_amount, max_bid_amount, created_at)
          VALUES (?, ?, ?, ?, NOW())",
-        [(int)$item_id, (int)$user_id, (float)$bid_amount, $max_bid_amount]
+        [(int)$item_id, (int)$user_id, normalizeBidMoney($visible_user_bid), $max_bid_amount]
     );
 
     if (!$bid_id) {
         return ['status' => 'error', 'message' => 'Failed to place bid'];
     }
 
+    // If the incumbent's max bid automatically countered, record that visible counter-bid.
+    if (!$is_user_winning_after_bid && $previous_high_bidder_id) {
+        $proxy_bid_id = dbInsert(
+            "INSERT INTO bids (item_id, user_id, bid_amount, max_bid_amount, created_at)
+             VALUES (?, ?, ?, ?, NOW())",
+            [
+                (int)$item_id,
+                (int)$previous_high_bidder_id,
+                normalizeBidMoney($new_high_bid),
+                normalizeBidMoney($incumbent_ceiling)
+            ]
+        );
+    }
+
     // Update item with new high bid
     $time_remaining = strtotime($item['auction_end_time']) - time();
     $should_extend = $time_remaining > 0 && $time_remaining <= (ANTI_SNIPING_MINUTES * 60);
+    $new_end_time = null;
 
     if ($should_extend) {
         // Extend auction by ANTI_SNIPING_MINUTES
@@ -132,23 +246,20 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
             'Y-m-d H:i:s',
             strtotime($item['auction_end_time']) + (ANTI_SNIPING_MINUTES * 60)
         );
-        dbUpdate(
-            "UPDATE items SET current_high_bid = ?, current_high_bidder_id = ?,
-                    auction_end_time = ? WHERE id = ?",
-            [(float)$bid_amount, (int)$user_id, $new_end_time, (int)$item_id]
-        );
-    } else {
-        dbUpdate(
-            "UPDATE items SET current_high_bid = ?, current_high_bidder_id = ? WHERE id = ?",
-            [(float)$bid_amount, (int)$user_id, (int)$item_id]
-        );
     }
+
+    updateItemBidState($item_id, $new_high_bid, $new_high_bidder_id, $new_end_time);
 
     // Log audit event
     dbInsert(
         "INSERT INTO audit_log (event_type, user_id, item_id, description, created_at)
          VALUES (?, ?, ?, ?, NOW())",
-        ['BID_PLACED', (int)$user_id, (int)$item_id, 'Bid placed: $' . $bid_amount]
+        [
+            'BID_PLACED',
+            (int)$user_id,
+            (int)$item_id,
+            'Bid placed: $' . $visible_user_bid . ($max_bid_amount ? ' max $' . $max_bid_amount : '')
+        ]
     );
 
     // Get updated item state
@@ -159,12 +270,18 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
         'status' => 'success',
         'message' => 'Bid placed successfully',
         'bid_id' => $bid_id,
+        'proxy_bid_id' => $proxy_bid_id,
         'new_high_bid' => (float)$updated_item['current_high_bid'],
         'next_minimum' => $next_minimum,
         'auction_end_time' => $updated_item['auction_end_time'],
         'time_remaining_ms' => max(0, (strtotime($updated_item['auction_end_time']) - time()) * 1000),
         'was_anti_sniping_applied' => $should_extend,
-        'previous_high_bidder_id' => $previous_high_bidder_id
+        'was_proxy_applied' => $was_proxy_applied,
+        'is_user_winning' => (int)$updated_item['current_high_bidder_id'] === (int)$user_id,
+        'proxy_message' => $proxy_message,
+        'previous_high_bidder_id' => ((int)$updated_item['current_high_bidder_id'] === (int)$previous_high_bidder_id)
+            ? null
+            : $previous_high_bidder_id
     ];
 }
 
@@ -180,7 +297,7 @@ function getRecentBids($item_id, $limit = 20) {
          FROM bids b
          JOIN users u ON u.id = b.user_id
          WHERE b.item_id = ?
-         ORDER BY b.created_at DESC
+         ORDER BY b.created_at DESC, b.id DESC
          LIMIT ?",
         [(int)$item_id, (int)$limit]
     );
@@ -229,4 +346,3 @@ function getUserBidHistory($user_id) {
         [(int)$user_id]
     );
 }
-

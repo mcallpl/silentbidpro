@@ -302,8 +302,25 @@ $page_title = APP_NAME . ' — Admin Dashboard';
                     <input type="text" name="title" class="form-input" required />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-input" rows="3"></textarea>
+                    <div class="description-field-header">
+                        <label class="form-label" for="itemDescription">Description</label>
+                        <button type="button" id="improveDescriptionBtn" class="btn btn-secondary btn-small">
+                            <span class="btn-text">Improve description</span>
+                            <span class="btn-spinner" style="display: none;">Improving...</span>
+                        </button>
+                    </div>
+                    <textarea
+                        id="itemDescription"
+                        name="description"
+                        class="form-input"
+                        rows="6"
+                        placeholder="Describe the item, experience, restrictions, donor notes, mood, location, what is included, and anything that should appear in the final auction listing."
+                    ></textarea>
+                    <div class="ai-item-note">
+                        <strong>Image assist:</strong>
+                        A detailed description helps Silent Bid Buddy create a polished item image for cards, catalogs, and print materials. Use concrete details like setting, style, colors, audience, and what the bidder receives.
+                    </div>
+                    <div id="descriptionImproveResult" class="description-improve-result" style="display: none;"></div>
                 </div>
                 <!-- QR Code Display (for existing items) -->
                 <div id="itemQRDisplay" style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: #f0f4ff; border-radius: 8px; border-left: 3px solid #667eea;">
@@ -334,9 +351,9 @@ $page_title = APP_NAME . ' — Admin Dashboard';
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            <p class="upload-text">Drag image or URL here or <button type="button" class="upload-btn" id="browseImageBtn">browse from Mac Photo</button></p>
-                            <p class="upload-hint">File (JPG, PNG, GIF, WebP) or image URL</p>
-                        </div>
+	                            <p class="upload-text">Drag image or URL here or <button type="button" class="upload-btn" id="browseImageBtn">browse from Mac Photo</button></p>
+	                            <p class="upload-hint">File (JPG, PNG, GIF, WebP) or image URL. If no strong photo is available, use the item description to generate one.</p>
+	                        </div>
                         <div class="image-preview" id="imagePreview" style="display: none;">
                             <img id="previewImg" alt="Preview" />
                             <button type="button" class="remove-image-btn" id="removeImageBtn">✕ Remove</button>

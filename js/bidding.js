@@ -228,7 +228,7 @@ SBB.Bidding = {
                 await this.loadBidFeed();
 
                 // Show success message
-                this.showSuccessNotification('Your bid was placed successfully! Refreshing live bids...');
+                this.showSuccessNotification(response.proxy_message || 'Your bid was placed successfully.');
             } else {
                 console.error('[BID SYNC] ❌ Bid placement failed:', response);
                 this.showErrorNotification(response.message || 'Bid failed');
@@ -243,6 +243,8 @@ SBB.Bidding = {
 
     updateItemDisplay(bidResponse) {
         // Update current high bid
+        window.SBB.currentHighBid = parseFloat(bidResponse.new_high_bid);
+
         const currentBidAmount = document.querySelector('.current-bid-amount');
         if (currentBidAmount) {
             currentBidAmount.textContent = SBB.Utils.formatCurrency(bidResponse.new_high_bid);
@@ -263,7 +265,11 @@ SBB.Bidding = {
         // Update bidder status
         const bidderStatus = document.querySelector('.bidder-status');
         if (bidderStatus) {
-            bidderStatus.innerHTML = '<span class="badge badge-winning">You\'re Winning! 🏆</span>';
+            if (bidResponse.is_user_winning) {
+                bidderStatus.innerHTML = '<span class="badge badge-winning">You\'re Winning!</span>';
+            } else {
+                bidderStatus.innerHTML = '<span class="bidder-name">Another bidder is still ahead</span>';
+            }
         }
 
         // Show anti-sniping message if applied

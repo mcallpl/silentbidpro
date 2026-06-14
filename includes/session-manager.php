@@ -4,9 +4,9 @@
 // Handles both user and admin session persistence
 // ============================================================
 
-define('SESSION_COOKIE_NAME', 'session_token');
-define('ADMIN_SESSION_COOKIE_NAME', 'admin_session_token');
-define('SESSION_COOKIE_LIFETIME', 30 * 24 * 60 * 60); // 30 days
+if (!defined('SESSION_COOKIE_NAME')) define('SESSION_COOKIE_NAME', 'session_token');
+if (!defined('ADMIN_SESSION_COOKIE_NAME')) define('ADMIN_SESSION_COOKIE_NAME', 'admin_session_token');
+if (!defined('SESSION_COOKIE_LIFETIME')) define('SESSION_COOKIE_LIFETIME', 30 * 24 * 60 * 60); // 30 days
 
 /**
  * Set a secure, persistent session cookie (works on ALL PHP versions)

@@ -550,6 +550,12 @@ const AdminDashboard = {
         document.getElementById('itemQRDisplay').style.display = 'none';
         document.getElementById('createPDFBtn').style.display = 'none';
         document.getElementById('modalDocumentLink').href = '#';
+        form.dataset.imagePrompt = '';
+        const improveResult = document.getElementById('descriptionImproveResult');
+        if (improveResult) {
+            improveResult.style.display = 'none';
+            improveResult.textContent = '';
+        }
 
         modal.style.display = 'block';
         this.setupImageUpload();
@@ -922,6 +928,14 @@ const AdminDashboard = {
         // Item form submission
         document.getElementById('itemForm').addEventListener('submit', (e) => this.handleItemFormSubmit(e));
 
+        const improveDescriptionBtn = document.getElementById('improveDescriptionBtn');
+        if (improveDescriptionBtn) {
+            improveDescriptionBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleImproveDescription();
+            });
+        }
+
         // Create PDF button with direct reference
         const createPDFBtn = document.getElementById('createPDFBtn');
         if (createPDFBtn) {
@@ -941,6 +955,77 @@ const AdminDashboard = {
                 field.addEventListener('change', () => this.validatePDFRequirements());
             }
         });
+    },
+
+    async handleImproveDescription() {
+        const form = document.getElementById('itemForm');
+        const titleField = form.querySelector('[name="title"]');
+        const descriptionField = form.querySelector('[name="description"]');
+        const resultDiv = document.getElementById('descriptionImproveResult');
+        const button = document.getElementById('improveDescriptionBtn');
+        const btnText = button?.querySelector('.btn-text');
+        const btnSpinner = button?.querySelector('.btn-spinner');
+
+        const title = titleField?.value.trim() || '';
+        const description = descriptionField?.value.trim() || '';
+
+        if (!title) {
+            this.showToast('Add an item title first', 'error');
+            titleField?.focus();
+            return;
+        }
+
+        if (description.split(/\s+/).filter(Boolean).length < 8) {
+            this.showToast('Add a few more description details first', 'error');
+            descriptionField?.focus();
+            return;
+        }
+
+        if (resultDiv) {
+            resultDiv.style.display = 'none';
+            resultDiv.textContent = '';
+        }
+
+        if (button) button.disabled = true;
+        if (btnText) btnText.style.display = 'none';
+        if (btnSpinner) btnSpinner.style.display = 'inline';
+
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(this.config.apiBaseUrl + '/improve-description.php', {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({
+                    title,
+                    description,
+                    fair_market_value: formData.get('fair_market_value') || null,
+                    starting_bid: formData.get('starting_bid') || null,
+                    buy_now_price: formData.get('buy_now_price') || null
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || data.status !== 'ok') {
+                throw new Error(data.message || 'Could not improve description');
+            }
+
+            descriptionField.value = data.description;
+            form.dataset.imagePrompt = data.image_prompt || '';
+
+            if (resultDiv) {
+                resultDiv.textContent = 'Improved copy is in the description box. Review it, adjust any details, then save. The image generator will use this stronger description as its creative brief.';
+                resultDiv.style.display = 'block';
+            }
+
+            this.showToast(data.message || 'Description improved', 'success');
+        } catch (error) {
+            this.showToast(error.message || 'Could not improve description', 'error');
+        } finally {
+            if (button) button.disabled = false;
+            if (btnText) btnText.style.display = 'inline';
+            if (btnSpinner) btnSpinner.style.display = 'none';
+        }
     },
 
     async handleItemFormSubmit(e) {
@@ -1018,7 +1103,13 @@ const AdminDashboard = {
             document.getElementById('itemModalTitle').textContent = 'Create New Item';
             document.getElementById('itemForm').reset();
             document.getElementById('itemForm').dataset.itemId = '';
+            document.getElementById('itemForm').dataset.imagePrompt = '';
             document.getElementById('itemFormError').style.display = 'none';
+            const improveResult = document.getElementById('descriptionImproveResult');
+            if (improveResult) {
+                improveResult.style.display = 'none';
+                improveResult.textContent = '';
+            }
             document.getElementById('imagePreview').style.display = 'none';
             document.getElementById('uploadPlaceholder').style.display = 'block';
             document.getElementById('createPDFBtn').style.display = 'none';

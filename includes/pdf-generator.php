@@ -24,11 +24,24 @@ class ItemPDFGenerator {
         return $filename;
     }
 
+    private function getDocumentAssetUrl($assetUrl) {
+        $assetUrl = trim((string)$assetUrl);
+
+        if ($assetUrl === '' ||
+            preg_match('/^(https?:)?\/\//i', $assetUrl) ||
+            strpos($assetUrl, '/') === 0 ||
+            stripos($assetUrl, 'data:') === 0) {
+            return $assetUrl;
+        }
+
+        return '../' . ltrim($assetUrl, '/');
+    }
+
     private function buildHTML() {
         $item = $this->item;
         $lotNumber = (int)$item['item_number'];
         $title = htmlspecialchars($item['title']);
-        $image = htmlspecialchars($item['image_url'] ?? '');
+        $image = htmlspecialchars($this->getDocumentAssetUrl($item['image_url'] ?? ''));
         $startBid = '$' . number_format((float)$item['starting_bid'], 0);
         $fmv = $item['fair_market_value'] ? '$' . number_format((float)$item['fair_market_value'], 0) : 'N/A';
         $increment = '$' . number_format((float)($item['min_increment'] ?? 50), 0);
