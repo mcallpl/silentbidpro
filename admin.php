@@ -403,6 +403,69 @@ $page_title = APP_NAME . ' — Admin Dashboard';
         </div>
     </div>
 
+    <!-- Edit Event Modal -->
+    <div id="eventModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="eventModalTitle">Edit Event</h2>
+                <button class="modal-close" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="eventForm" class="admin-form">
+                <input type="hidden" id="eventId" name="event_id" />
+
+                <div class="form-group">
+                    <label class="form-label">Event Name *</label>
+                    <input type="text" id="eventName" name="name" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Event Date</label>
+                    <input type="date" id="eventDate" name="event_date" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="eventStatus" name="status" class="form-input">
+                        <option value="draft">Draft</option>
+                        <option value="open">Open</option>
+                        <option value="closed">Closed</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Auction Start Time</label>
+                    <input type="datetime-local" id="eventStartTime" name="auction_start_time" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Auction End Time *</label>
+                    <input type="datetime-local" id="eventEndTime" name="auction_end_time" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Payment Mode</label>
+                    <select id="eventPaymentMode" name="payment_mode" class="form-input">
+                        <option value="combined">Combined (Items + Checkout)</option>
+                        <option value="item">Per Item</option>
+                        <option value="both">Both</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Timezone</label>
+                    <input type="text" id="eventTimezone" name="timezone" class="form-input" value="America/Los_Angeles" />
+                </div>
+
+                <div id="eventFormError" class="error-message" style="display: none;"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Event</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- User Details Modal -->
     <div id="userModal" class="modal" style="display: none;">
         <div class="modal-content modal-large">

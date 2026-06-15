@@ -1793,11 +1793,97 @@ const AdminDashboard = {
     },
 
     editEvent(eventId) {
-        alert('Event editing coming soon. Event ID: ' + eventId);
+        // Fetch event data and open modal
+        this.loadEventForEditing(eventId);
     },
 
     viewEventSettings(eventId) {
-        alert('Event settings coming soon. Event ID: ' + eventId);
+        alert('Event settings (SMS, branding, payment) coming soon. Event ID: ' + eventId);
+    },
+
+    async loadEventForEditing(eventId) {
+        try {
+            const response = await fetch(`/api/admin/get-event.php?id=${eventId}`, {
+                method: 'GET',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || data.status !== 'ok') {
+                alert('Error loading event: ' + (data.message || 'Unknown error'));
+                return;
+            }
+
+            const event = data.event;
+
+            // Populate form
+            document.getElementById('eventId').value = event.id;
+            document.getElementById('eventName').value = event.name;
+            document.getElementById('eventDate').value = event.event_date || '';
+            document.getElementById('eventStatus').value = event.status;
+            document.getElementById('eventPaymentMode').value = event.payment_mode;
+            document.getElementById('eventTimezone').value = event.timezone;
+
+            // Convert datetime to local format for datetime-local input
+            if (event.auction_start_time) {
+                document.getElementById('eventStartTime').value = event.auction_start_time.replace(' ', 'T');
+            }
+            if (event.auction_end_time) {
+                document.getElementById('eventEndTime').value = event.auction_end_time.replace(' ', 'T');
+            }
+
+            document.getElementById('eventModalTitle').textContent = `Edit Event: ${event.name}`;
+
+            // Show modal
+            this.showModal('eventModal');
+
+            // Setup form submit handler
+            document.getElementById('eventForm').onsubmit = (e) => this.saveEvent(e);
+
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    },
+
+    async saveEvent(e) {
+        e.preventDefault();
+
+        const eventId = document.getElementById('eventId').value;
+        const formData = {
+            id: eventId,
+            name: document.getElementById('eventName').value,
+            event_date: document.getElementById('eventDate').value || null,
+            status: document.getElementById('eventStatus').value,
+            auction_start_time: document.getElementById('eventStartTime').value || null,
+            auction_end_time: document.getElementById('eventEndTime').value,
+            payment_mode: document.getElementById('eventPaymentMode').value,
+            timezone: document.getElementById('eventTimezone').value
+        };
+
+        try {
+            const response = await fetch('/api/admin/update-event.php', {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                credentials: 'include',
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'ok') {
+                alert('Event saved successfully!');
+                this.hideModal('eventModal');
+                this.loadEvents();
+            } else {
+                document.getElementById('eventFormError').textContent = data.message || 'Failed to save event';
+                document.getElementById('eventFormError').style.display = 'block';
+            }
+        } catch (error) {
+            document.getElementById('eventFormError').textContent = 'Error: ' + error.message;
+            document.getElementById('eventFormError').style.display = 'block';
+        }
     },
 
     async loadAdminAccounts() {
