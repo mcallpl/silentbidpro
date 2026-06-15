@@ -83,6 +83,7 @@ $page_title = APP_NAME . ' — Admin Dashboard';
             <button class="nav-tab" data-section="transactions">Transactions</button>
             <button class="nav-tab" data-section="events" style="background-color: #f0e8f8; font-weight: bold; display: none;" id="eventsTab">📅 Events</button>
             <button class="nav-tab" data-section="admins" style="background-color: #e8f4f8; font-weight: bold;">👤 Admin Control</button>
+            <a href="admin/help.html" class="nav-tab" style="text-decoration: none; background-color: #f8f0e8; font-weight: bold; display: flex; align-items: center;">ℹ️ Help & Resources</a>
         </nav>
 
         <!-- Main Content -->

@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Help & Resources - Silent Bid Buddy</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <style>
+        .help-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+
+        .help-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .help-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .help-header p {
+            font-size: 16px;
+            color: #666;
+        }
+
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .help-card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .help-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .help-card.stripe {
+            border-left-color: #00d4ff;
+        }
+
+        .help-card.users {
+            border-left-color: #667eea;
+        }
+
+        .help-card.items {
+            border-left-color: #ff6b6b;
+        }
+
+        .help-card.descriptions {
+            border-left-color: #51cf66;
+        }
+
+        .help-card.pricing {
+            border-left-color: #ffd93d;
+        }
+
+        .help-card.pdf {
+            border-left-color: #ff922b;
+        }
+
+        .help-card h2 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .help-icon {
+            font-size: 28px;
+        }
+
+        .help-content {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .help-section {
+            margin-bottom: 20px;
+        }
+
+        .help-section h3 {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #667eea;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .help-section p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .help-tip {
+            background: #f0f4ff;
+            border-left: 3px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #444;
+        }
+
+        .help-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        .help-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            font-size: 13px;
+            color: #666;
+            position: relative;
+        }
+
+        .help-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #51cf66;
+            font-weight: bold;
+        }
+
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .strategy-box {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .strategy-box h4 {
+            color: #333;
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .strategy-box p {
+            margin: 0;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .quick-start {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 8px;
+            margin-bottom: 50px;
+        }
+
+        .quick-start h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .quick-start-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .quick-step {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 4px;
+            border-left: 3px solid white;
+        }
+
+        .quick-step h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .quick-step p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .resource-section {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .resource-section h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .pricing-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        .pricing-table td, .pricing-table th {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .pricing-table th {
+            background: #f5f5f5;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .pricing-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .help-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .strategy-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-start {
+                padding: 30px 20px;
+            }
+
+            .help-header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body class="help-page">
+    <div class="help-container">
+        <a href="javascript:history.back()" class="back-link">← Back to Dashboard</a>
+
+        <!-- Quick Start -->
+        <div class="quick-start">
+            <h2>🚀 Get Started in 5 Minutes</h2>
+            <div class="quick-start-steps">
+                <div class="quick-step">
+                    <h3>1. Set Up Stripe</h3>
+                    <p>Configure your Stripe account so bidders can pay securely. Takes 2 minutes.</p>
+                </div>
+                <div class="quick-step">
+                    <h3>2. Create Items</h3>
+                    <p>Add auction items with compelling descriptions and realistic starting bids.</p>
+                </div>
+                <div class="quick-step">
+                    <h3>3. Add Bidders</h3>
+                    <p>Invite people to bid. Can be imported from a list or added manually.</p>
+                </div>
+                <div class="quick-step">
+                    <h3>4. Launch Auction</h3>
+                    <p>Go live and watch bids come in. Real-time bidding throughout your event.</p>
+                </div>
+                <div class="quick-step">
+                    <h3>5. Collect Payment</h3>
+                    <p>Winners check out securely. Payments go straight to your account.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Help Sections -->
+        <div class="help-header">
+            <h1>Admin Resources & Best Practices</h1>
+            <p>Everything you need to run a successful online silent auction</p>
+        </div>
+
+        <div class="help-grid">
+            <!-- Stripe Setup -->
+            <div class="help-card stripe">
+                <h2><span class="help-icon">💳</span> Stripe Payment Setup</h2>
+                <div class="help-content">
+                    <div class="help-section">
+                        <h3>Overview</h3>
+                        <p>Stripe processes payments securely. Your nonprofit organization needs a Stripe account connected to Silent Bid Buddy.</p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Setup Steps</h3>
+                        <ul class="help-list">
+                            <li>Sign up for free at stripe.com (takes 5 min)</li>
+                            <li>Verify your nonprofit status</li>
+                            <li>Get your Stripe API keys (publishable & secret)</li>
+                            <li>Paste keys into Silent Bid Buddy admin settings</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Multiple Events?</h3>
+                        <p>Each event can use a different Stripe account. Perfect for multi-org fundraising or separate campaigns.</p>
+                    </div>
+
+                    <div class="help-tip">
+                        <strong>💡 Pro Tip:</strong> Use Stripe test mode first to verify everything works before going live.
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Security</h3>
+                        <p>Never share your secret API key. Payments are PCI-DSS compliant and 256-bit encrypted.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Management -->
+            <div class="help-card users">
+                <h2><span class="help-icon">👥</span> Managing Bidders & Admin Users</h2>
+                <div class="help-content">
+                    <div class="help-section">
+                        <h3>Add Bidders</h3>
+                        <p>Bidders are people placing bids. Add them with their name and phone number. Email is optional.</p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>User Types</h3>
+                        <ul class="help-list">
+                            <li><strong>Bidder:</strong> Can view items and place bids</li>
+                            <li><strong>Viewer:</strong> Can see items but not bid (great for silent monitoring)</li>
+                            <li><strong>Admin:</strong> Can manage the auction (event admins only)</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Admin Roles</h3>
+                        <p><strong>Event Manager:</strong> Full control of items, users, and settings for their event.</p>
+                        <p><strong>Super Admin:</strong> Can manage all events and organizations.</p>
+                    </div>
+
+                    <div class="help-tip">
+                        <strong>💡 Pro Tip:</strong> Add a mobile number for bidders so you can send SMS alerts about winning bids.
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Batch Import</h3>
+                        <p>Uploading 50+ people? Use the CSV import feature to add them in bulk.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item Creation -->
+            <div class="help-card items">
+                <h2><span class="help-icon">📦</span> Creating Auction Items</h2>
+                <div class="help-content">
+                    <div class="help-section">
+                        <h3>Item Essentials</h3>
+                        <p>Every item needs a compelling title, clear description, and realistic starting bid.</p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Required Fields</h3>
+                        <ul class="help-list">
+                            <li>Item name/title (max 100 characters)</li>
+                            <li>Starting bid amount</li>
+                            <li>Minimum increment ($5 typical)</li>
+                            <li>Close time (when bidding ends)</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Optional But Important</h3>
+                        <ul class="help-list">
+                            <li>High-quality image (first 200px shows in list)</li>
+                            <li>Detailed description (see tips →)</li>
+                            <li>Fair market value (helps bidders assess value)</li>
+                            <li>Buy now price (optional early purchase option)</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-tip">
+                        <strong>💡 Pro Tip:</strong> Items with photos get 30-40% more bids. Use clear, well-lit photos.
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Organization</h3>
+                        <p>Group items into categories (Dining, Experiences, Services, etc.) to help bidders browse.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Descriptions -->
+            <div class="help-card descriptions">
+                <h2><span class="help-icon">✍️</span> Writing Great Descriptions</h2>
+                <div class="help-content">
+                    <div class="help-section">
+                        <h3>The Formula</h3>
+                        <p><strong>Hook (1 line)</strong> → <strong>Details (3-4 lines)</strong> → <strong>Value (1 line)</strong></p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Make It Specific</h3>
+                        <p>❌ Bad: "Nice dinner for two"<br>
+                        ✓ Good: "4-course dinner for 2 at Blue Hill with wine pairings and chef's tasting menu"</p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Include Details</h3>
+                        <ul class="help-list">
+                            <li>When can this be used? (dates matter)</li>
+                            <li>Who provides it? (vendor/business name)</li>
+                            <li>What's included? (appetizers? drinks?)</li>
+                            <li>Any restrictions? (weekends only? expiration?)</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-tip">
+                        <strong>💡 Pro Tip:</strong> Use our AI description enhancer to automatically expand basic descriptions into compelling content.
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Call to Action</h3>
+                        <p>End with a clear CTA: "A perfect date night. Bid now!" or "Limited availability - bid today!"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Strategy -->
+            <div class="help-card pricing">
+                <h2><span class="help-icon">💰</span> Pricing Strategy & Reserve Prices</h2>
+                <div class="help-content">
+                    <div class="help-section">
+                        <h3>Starting Bid Strategy</h3>
+                        <p>Start at 40-60% of fair market value. Higher starts = fewer bids. Lower starts = higher final prices.</p>
+                    </div>
+
+                    <div class="strategy-grid">
+                        <div class="strategy-box">
+                            <h4>Conservative</h4>
+                            <p>Start at 40% FMV. Better for untested audiences. Builds momentum.</p>
+                        </div>
+                        <div class="strategy-box">
+                            <h4>Aggressive</h4>
+                            <p>Start at 70% FMV. Works with experienced bidders who know value.</p>
+                        </div>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Increment Strategy</h3>
+                    </div>
+
+                    <table class="pricing-table">
+                        <tr>
+                            <th>Item Value</th>
+                            <th>Min Increment</th>
+                            <th>Why</th>
+                        </tr>
+                        <tr>
+                            <td>$0-$50</td>
+                            <td>$2-5</td>
+                            <td>Encourages competitive bidding</td>
+                        </tr>
+                        <tr>
+                            <td>$50-$250</td>
+                            <td>$5-10</td>
+                            <td>Standard competitive range</td>
+                        </tr>
+                        <tr>
+                            <td>$250+</td>
+                            <td>$15-25</td>
+                            <td>Avoids endless minor increases</td>
+                        </tr>
+                    </table>
+
+                    <div class="help-section">
+                        <h3>Reserve Prices</h3>
+                        <p><strong>Set a minimum</strong> you'll accept. If bids don't hit it, item doesn't sell. Builds credibility.</p>
+                    </div>
+
+                    <div class="help-tip">
+                        <strong>💡 Pro Tip:</strong> Items that sell at 130-150% of FMV are priced perfectly. That's the sweet spot.
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF & Printing -->
+            <div class="help-card pdf">
+                <h2><span class="help-icon">📄</span> Creating Item Lists & Catalogs</h2>
+                <div class="help-content">
+                    <div class="help-section">
+                        <h3>Generate PDF Catalogs</h3>
+                        <p>Export a professional catalog of all items. Perfect for printing or emailing to bidders before the event.</p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>What Gets Included</h3>
+                        <ul class="help-list">
+                            <li>Item photos and descriptions</li>
+                            <li>Estimated value ranges</li>
+                            <li>Bidding time windows</li>
+                            <li>Winning contact info location</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Print Tips</h3>
+                        <p>Print 2-3 days before your event. Set in a prominent location so bidders can review beforehand.</p>
+                    </div>
+
+                    <div class="help-tip">
+                        <strong>💡 Pro Tip:</strong> Have bidders use the catalog to circle their top picks. Creates excitement and bidding momentum.
+                    </div>
+
+                    <div class="help-section">
+                        <h3>Email Campaign</h3>
+                        <p>Send catalogs to your email list 5 days before the auction. Include direct links to items.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Strategies Section -->
+        <div class="resource-section">
+            <h2>📊 Advanced Auction Strategy</h2>
+
+            <h3 style="font-size: 16px; margin-top: 25px; margin-bottom: 15px; color: #333;">Timing & Momentum</h3>
+            <p style="color: #666; margin-bottom: 15px;">Silent auctions typically raise 15-25% more revenue when properly timed and promoted.</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 4px;">
+                    <h4 style="color: #333; margin-bottom: 10px;">Before Event</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; color: #666;">
+                        <li>✓ Send catalog 5-7 days before</li>
+                        <li>✓ Remind bidders 2 days before</li>
+                        <li>✓ Send "live in 24 hours" email</li>
+                        <li>✓ Highlight top 5 items</li>
+                    </ul>
+                </div>
+
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 4px;">
+                    <h4 style="color: #333; margin-bottom: 10px;">During Event</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; color: #666;">
+                        <li>✓ Emcee calls out top items</li>
+                        <li>✓ Announce close times (⏰ 5 mins left!)</li>
+                        <li>✓ Create urgency for high-value items</li>
+                        <li>✓ Encourage real-time bidding</li>
+                    </ul>
+                </div>
+
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 4px;">
+                    <h4 style="color: #333; margin-bottom: 10px;">After Event</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; color: #666;">
+                        <li>✓ Invoice winners within 2 hours</li>
+                        <li>✓ Include winning price info</li>
+                        <li>✓ Provide direct checkout link</li>
+                        <li>✓ Follow up with thank you</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="font-size: 16px; margin-top: 25px; margin-bottom: 15px; color: #333;">Revenue Optimization</h3>
+
+            <table class="pricing-table" style="margin-top: 15px;">
+                <tr>
+                    <th>Strategy</th>
+                    <th>Expected Impact</th>
+                    <th>Best For</th>
+                </tr>
+                <tr>
+                    <td><strong>Experience Items</strong><br>Dinners, vacations, services</td>
+                    <td>+40-60% vs goods</td>
+                    <td>Building community connection</td>
+                </tr>
+                <tr>
+                    <td><strong>Trending Items</strong><br>What's popular now</td>
+                    <td>+25-35% vs standard</td>
+                    <td>Attracting younger bidders</td>
+                </tr>
+                <tr>
+                    <td><strong>Local Partnerships</strong><br>Donated from local business</td>
+                    <td>+15-25% (+ goodwill)</td>
+                    <td>Sustaining donor relationships</td>
+                </tr>
+                <tr>
+                    <td><strong>Bundle Deals</strong><br>Combine 2-3 related items</td>
+                    <td>+30-50% total value</td>
+                    <td>Moving slow items</td>
+                </tr>
+                <tr>
+                    <td><strong>Limited Quantity</strong><br>"Only one available"</td>
+                    <td>+10-20% (scarcity)</td>
+                    <td>Creating competition</td>
+                </tr>
+            </table>
+
+            <h3 style="font-size: 16px; margin-top: 25px; margin-bottom: 15px; color: #333;">Ideal Item Mix</h3>
+            <p style="color: #666; margin-bottom: 15px;">For a fundraiser with 50 items, aim for this distribution:</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div style="background: #f0f4ff; padding: 15px; border-radius: 4px; border-left: 3px solid #667eea;">
+                    <h4 style="color: #667eea; margin: 0 0 8px 0; font-size: 13px;">🍽️ Experiences (35-40%)</h4>
+                    <p style="margin: 0; font-size: 13px; color: #555;">Dinners, packages, events. People bid on memories.</p>
+                </div>
+
+                <div style="background: #f0f4ff; padding: 15px; border-radius: 4px; border-left: 3px solid #51cf66;">
+                    <h4 style="color: #51cf66; margin: 0 0 8px 0; font-size: 13px;">🎁 Goods (30-35%)</h4>
+                    <p style="margin: 0; font-size: 13px; color: #555;">Merchandise, art, collectibles. Lower price point.</p>
+                </div>
+
+                <div style="background: #f0f4ff; padding: 15px; border-radius: 4px; border-left: 3px solid #ff922b;">
+                    <h4 style="color: #ff922b; margin: 0 0 8px 0; font-size: 13px;">💼 Services (25-30%)</h4>
+                    <p style="margin: 0; font-size: 13px; color: #555;">Consulting, lessons, labor. High margin items.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Common Questions -->
+        <div class="resource-section">
+            <h2>❓ FAQ & Troubleshooting</h2>
+
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 15px; color: #333; margin-bottom: 12px;">Q: How do I increase final bid amounts?</h3>
+                <p style="color: #666; margin: 0; font-size: 13px;">Start at 50% of FMV, use minimum $5-10 increments, set competitive items at similar close times to create urgency, and use compelling descriptions with strong photos.</p>
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 15px; color: #333; margin-bottom: 12px;">Q: What if someone doesn't pay after winning?</h3>
+                <p style="color: #666; margin: 0; font-size: 13px;">Silent Bid Buddy sends automatic payment reminders. After 48 hours, the item goes to the next highest bidder. You can also manually re-open bidding.</p>
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 15px; color: #333; margin-bottom: 12px;">Q: Can I run multiple silent auctions at once?</h3>
+                <p style="color: #666; margin: 0; font-size: 13px;">Yes. Create separate events. Each can have different items, bidders, close times, and even different Stripe accounts. Admins can manage multiple events.</p>
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 15px; color: #333; margin-bottom: 12px;">Q: How much does it cost to use Silent Bid Buddy?</h3>
+                <p style="color: #666; margin: 0; font-size: 13px;">SBB is free. You only pay Stripe's standard processing fees (2.9% + 30¢ per transaction), which are competitive with other payment processors.</p>
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 15px; color: #333; margin-bottom: 12px;">Q: Can I have a reserve price on items?</h3>
+                <p style="color: #666; margin: 0; font-size: 13px;">Yes. Set a minimum acceptable price. If the winning bid doesn't meet it, you can choose not to sell the item or negotiate with the highest bidder.</p>
+            </div>
+
+            <div>
+                <h3 style="font-size: 15px; color: #333; margin-bottom: 12px;">Q: What payment methods do bidders have?</h3>
+                <p style="color: #666; margin: 0; font-size: 13px;">Credit/debit cards through Stripe (Visa, Mastercard, American Express, Discover). Payments are PCI-DSS compliant and 256-bit encrypted.</p>
+            </div>
+        </div>
+
+        <!-- Best Practices Checklist -->
+        <div class="resource-section">
+            <h2>✅ Pre-Event Checklist</h2>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div>
+                    <h3 style="font-size: 14px; color: #667eea; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;">📋 Items & Setup</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ All items have photos</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Descriptions are 3+ sentences</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Starting bids are realistic</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Items are organized by category</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Close times are staggered</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ PDF catalog generated</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 style="font-size: 14px; color: #667eea; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;">💳 Payment Setup</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Stripe account configured</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ API keys entered correctly</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Tested in Stripe sandbox mode</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Banking info verified</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Payout method selected</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 style="font-size: 14px; color: #667eea; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;">👥 Bidders & Access</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Bidders added to system</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Phone numbers verified</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Admin accounts created</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Event goes live tomorrow</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Bidders notified with link</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 style="font-size: 14px; color: #667eea; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;">🚀 Launch & During Event</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Event goes live on time</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Monitor for technical issues</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Emcee calls out items</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Announce closing times</li>
+                        <li style="padding: 8px 0; font-size: 13px; color: #666;">☐ Celebrate high bids</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; padding: 40px 20px; color: #999; font-size: 13px; border-top: 1px solid #eee; margin-top: 50px;">
+            <p>Need additional help? Contact support@silentbidbuddy.com</p>
+            <p style="margin-top: 10px;">Last updated: June 2026 | Silent Bid Buddy v2.0</p>
+        </div>
+    </div>
+</body>
+</html>
