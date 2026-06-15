@@ -1763,16 +1763,19 @@ const AdminDashboard = {
             }
 
             // Build events table
-            let html = '<table class="admin-table"><thead><tr><th>Event ID</th><th>Name</th><th>Organization</th><th>Status</th><th>Items</th><th>Actions</th></tr></thead><tbody>';
+            let html = '<table class="admin-table"><thead><tr><th>Event ID</th><th>Name</th><th>Organization</th><th>Status</th><th>Event Date</th><th>Items</th><th>Actions</th></tr></thead><tbody>';
 
             events.forEach(event => {
-                const status = event.is_active ? '<span style="color: green;">Active</span>' : '<span style="color: red;">Inactive</span>';
+                const statusColor = event.status === 'open' ? 'green' : event.status === 'draft' ? 'orange' : 'red';
+                const statusDisplay = event.status.charAt(0).toUpperCase() + event.status.slice(1);
+                const eventDate = event.event_date ? new Date(event.event_date).toLocaleDateString() : 'N/A';
                 html += `
                     <tr>
                         <td>${event.id}</td>
                         <td><strong>${event.name}</strong></td>
                         <td>${event.organization_name || 'N/A'}</td>
-                        <td>${status}</td>
+                        <td><span style="color: ${statusColor};">${statusDisplay}</span></td>
+                        <td>${eventDate}</td>
                         <td>${event.item_count || 0}</td>
                         <td>
                             <button class="btn btn-small" onclick="AdminDashboard.editEvent(${event.id})">Edit</button>

@@ -24,7 +24,8 @@ if ($admin['is_super_admin']) {
     // Super admin sees all events with organization names
     $events = dbGetAll(
         "SELECT e.id, e.name, e.organization_id, o.name AS organization_name,
-                e.is_active, COUNT(DISTINCT i.id) AS item_count
+                e.status, e.event_date, e.auction_start_time, e.auction_end_time,
+                COUNT(DISTINCT i.id) AS item_count
          FROM events e
          LEFT JOIN organizations o ON e.organization_id = o.id
          LEFT JOIN items i ON e.id = i.event_id
@@ -35,7 +36,8 @@ if ($admin['is_super_admin']) {
     // Non-super admins see events they have access to
     $events = dbGetAll(
         "SELECT DISTINCT e.id, e.name, e.organization_id, o.name AS organization_name,
-                e.is_active, COUNT(DISTINCT i.id) AS item_count
+                e.status, e.event_date, e.auction_start_time, e.auction_end_time,
+                COUNT(DISTINCT i.id) AS item_count
          FROM events e
          LEFT JOIN organizations o ON e.organization_id = o.id
          LEFT JOIN items i ON e.id = i.event_id
