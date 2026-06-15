@@ -236,6 +236,7 @@ $page_title = APP_NAME . ' — Admin Dashboard';
                 <h2>📅 Events Management</h2>
                 <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
                     <button id="createEventBtn" class="btn btn-primary">Create New Event</button>
+                    <button id="assignAdminsBtn" class="btn btn-secondary">👤 Assign Admins to Events</button>
                 </div>
                 <div id="eventsContainer" class="data-table">
                     <p class="loading">Loading events...</p>
@@ -400,6 +401,60 @@ $page_title = APP_NAME . ' — Admin Dashboard';
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Assign Admins to Events Modal -->
+    <div id="assignAdminsModal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Assign Admins to Events</h2>
+                <button class="modal-close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <p style="color: #666; margin-bottom: 1.5rem;">Select an event and assign admins with specific roles. Assigned admins will see this event in their Events tab.</p>
+
+                <div class="form-group">
+                    <label class="form-label">Select Event *</label>
+                    <select id="assignEventSelect" class="form-input" required>
+                        <option value="">-- Choose an event --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Select Admin(s) *</label>
+                    <div id="adminCheckboxes" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 4px;">
+                        <p style="color: #999;">Loading admins...</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Admin Role *</label>
+                    <select id="adminRoleSelect" class="form-input" required>
+                        <option value="">-- Choose a role --</option>
+                        <option value="viewer">Viewer (read-only)</option>
+                        <option value="manager">Manager (edit allowed)</option>
+                    </select>
+                    <p style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                        <strong>Viewer:</strong> Can view event and items, but cannot edit  |
+                        <strong>Manager:</strong> Can edit event details and items
+                    </p>
+                </div>
+
+                <div id="assignError" class="error-message" style="display: none; margin-top: 1rem;"></div>
+
+                <div class="form-actions" style="margin-top: 2rem;">
+                    <button type="button" id="assignAdminsSubmitBtn" class="btn btn-primary">Assign Selected Admins</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </div>
+
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee;">
+                    <h3 style="margin-bottom: 1rem;">Current Assignments</h3>
+                    <div id="currentAssignments" style="background: #f9f9f9; padding: 1rem; border-radius: 4px; min-height: 100px;">
+                        <p style="color: #999;">Select an event to see current assignments</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

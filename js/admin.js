@@ -98,11 +98,14 @@ const AdminDashboard = {
                         title.textContent = title.textContent.replace(' — Admin', ' — Super Admin');
                     }
 
-                    // Show Events tab for super admins only
+                    // Show Events tab for super admins
                     const eventsTab = document.getElementById('eventsTab');
                     if (eventsTab) {
                         eventsTab.style.display = '';
                     }
+                } else {
+                    // For regular admins, check if they have any assigned events
+                    this.checkIfAdminHasAssignedEvents(data.admin.id);
                 }
             }
         } catch (error) {
@@ -121,6 +124,28 @@ const AdminDashboard = {
 
         // Start metrics polling
         this.startMetricsPolling();
+    },
+
+    async checkIfAdminHasAssignedEvents(adminId) {
+        try {
+            const response = await fetch(`/api/admin/get-admin-assigned-events.php?admin_id=${adminId}`, {
+                method: 'GET',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'ok' && data.event_count > 0) {
+                // Show Events tab for admins with assigned events
+                const eventsTab = document.getElementById('eventsTab');
+                if (eventsTab) {
+                    eventsTab.style.display = '';
+                }
+            }
+        } catch (error) {
+            console.debug('Could not check assigned events:', error.message);
+        }
     },
 
     getAdminTokenFromCookie() {
@@ -1306,6 +1331,16 @@ const AdminDashboard = {
         document.getElementById('userEditForm')?.addEventListener('submit', (e) => {
             this.handleUserFormSubmit(e);
         });
+
+        // Assign admins to events button
+        document.getElementById('assignAdminsBtn')?.addEventListener('click', () => {
+            this.showAssignAdminsModal();
+        });
+
+        // Assign admins submit button
+        document.getElementById('assignAdminsSubmitBtn')?.addEventListener('click', () => {
+            this.saveAdminAssignments();
+        });
     },
 
     async closeExpiredAuctions() {
@@ -1895,6 +1930,214 @@ const AdminDashboard = {
         } catch (error) {
             document.getElementById('eventFormError').textContent = 'Error: ' + error.message;
             document.getElementById('eventFormError').style.display = 'block';
+        }
+    },
+
+    // Admin Assignment Functions
+    async showAssignAdminsModal() {
+        this.showModal('assignAdminsModal');
+        await this.loadEventsForAssignment();
+        await this.loadAdminsForAssignment();
+    },
+
+    async loadEventsForAssignment() {
+        try {
+            const response = await fetch(this.config.apiBaseUrl + '/get-events.php', {
+                method: 'GET',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+            const select = document.getElementById('assignEventSelect');
+            select.innerHTML = '<option value="">-- Choose an event --</option>';
+
+            if (data.status === 'ok' && data.events) {
+                data.events.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = event.name;
+                    select.appendChild(option);
+                });
+
+                // Load assignments when event is selected
+                select.addEventListener('change', () => this.loadEventAdminAssignments(select.value));
+            }
+        } catch (error) {
+            console.error('Error loading events:', error);
+        }
+    },
+
+    async loadAdminsForAssignment() {
+        try {
+            const response = await fetch(this.config.apiBaseUrl + '/crud-admins.php?action=list', {
+                method: 'GET',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+            const container = document.getElementById('adminCheckboxes');
+            container.innerHTML = '';
+
+            if (data.status === 'ok' && data.admins) {
+                // Filter out super admins, show only regular admins
+                const regularAdmins = data.admins.filter(admin => !admin.is_super_admin);
+
+                if (regularAdmins.length === 0) {
+                    container.innerHTML = '<p style="color: #999;">No regular admins available</p>';
+                    return;
+                }
+
+                regularAdmins.forEach(admin => {
+                    const label = document.createElement('label');
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                    label.style.padding = '0.5rem 0';
+                    label.style.cursor = 'pointer';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = admin.id;
+                    checkbox.className = 'admin-checkbox';
+                    checkbox.style.marginRight = '0.5rem';
+
+                    const span = document.createElement('span');
+                    span.textContent = `${admin.full_name} (${admin.username})`;
+
+                    label.appendChild(checkbox);
+                    label.appendChild(span);
+                    container.appendChild(label);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading admins:', error);
+        }
+    },
+
+    async loadEventAdminAssignments(eventId) {
+        if (!eventId) {
+            document.getElementById('currentAssignments').innerHTML = '<p style="color: #999;">Select an event to see current assignments</p>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/admin/get-event-admins.php?event_id=${eventId}`, {
+                method: 'GET',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+            const container = document.getElementById('currentAssignments');
+
+            if (data.status === 'ok' && data.assignments && data.assignments.length > 0) {
+                let html = '<table style="width: 100%; border-collapse: collapse;"><thead><tr style="background: #f0f0f0;"><th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd;">Admin</th><th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd;">Role</th><th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd;">Action</th></tr></thead><tbody>';
+
+                data.assignments.forEach(assignment => {
+                    html += `<tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 0.5rem;">${assignment.admin_name} (${assignment.admin_username})</td>
+                        <td style="padding: 0.5rem;"><strong>${assignment.role}</strong></td>
+                        <td style="padding: 0.5rem;">
+                            <button class="btn btn-small btn-danger" onclick="AdminDashboard.removeAdminAssignment(${eventId}, ${assignment.admin_id})">Remove</button>
+                        </td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="color: #999;">No admins assigned to this event yet</p>';
+            }
+        } catch (error) {
+            console.error('Error loading assignments:', error);
+        }
+    },
+
+    async saveAdminAssignments() {
+        const eventId = document.getElementById('assignEventSelect').value;
+        const role = document.getElementById('adminRoleSelect').value;
+        const checkboxes = document.querySelectorAll('.admin-checkbox:checked');
+        const adminIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+        const errorContainer = document.getElementById('assignError');
+        errorContainer.style.display = 'none';
+
+        if (!eventId) {
+            errorContainer.textContent = 'Please select an event';
+            errorContainer.style.display = 'block';
+            return;
+        }
+
+        if (!role) {
+            errorContainer.textContent = 'Please select a role';
+            errorContainer.style.display = 'block';
+            return;
+        }
+
+        if (adminIds.length === 0) {
+            errorContainer.textContent = 'Please select at least one admin';
+            errorContainer.style.display = 'block';
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/admin/assign-event-admins.php', {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                credentials: 'include',
+                body: JSON.stringify({
+                    event_id: parseInt(eventId),
+                    admin_ids: adminIds,
+                    role: role
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'ok') {
+                alert(`Successfully assigned ${adminIds.length} admin(s) to the event!`);
+                // Reload assignments
+                this.loadEventAdminAssignments(eventId);
+                // Uncheck all checkboxes
+                document.querySelectorAll('.admin-checkbox').forEach(cb => cb.checked = false);
+                document.getElementById('adminRoleSelect').value = '';
+            } else {
+                errorContainer.textContent = data.message || 'Failed to assign admins';
+                errorContainer.style.display = 'block';
+            }
+        } catch (error) {
+            errorContainer.textContent = 'Error: ' + error.message;
+            errorContainer.style.display = 'block';
+        }
+    },
+
+    async removeAdminAssignment(eventId, adminId) {
+        if (!confirm('Remove this admin from the event?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/admin/remove-event-admin.php', {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                credentials: 'include',
+                body: JSON.stringify({
+                    event_id: eventId,
+                    admin_id: adminId
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'ok') {
+                alert('Admin removed from event');
+                this.loadEventAdminAssignments(eventId);
+            } else {
+                alert('Error: ' + (data.message || 'Failed to remove admin'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
         }
     },
 
