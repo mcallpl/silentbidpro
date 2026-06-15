@@ -155,6 +155,8 @@ const AdminDashboard = {
             this.loadUsers(1);
         } else if (section === 'bids') {
             this.loadBids(1);
+        } else if (section === 'events') {
+            this.loadEvents();
         } else if (section === 'admins') {
             this.loadAdminAccounts();
         }
@@ -1735,6 +1737,64 @@ const AdminDashboard = {
 
         // Load initial content
         this.loadAdminAccounts();
+    },
+
+    async loadEvents() {
+        const container = document.getElementById('eventsContainer');
+        try {
+            const response = await fetch('/api/admin/get-events.php', {
+                method: 'GET',
+                headers: this.getAuthHeaders(),
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || data.status !== 'ok') {
+                container.innerHTML = `<p class="error">Error: ${data.message || 'Failed to load events'}</p>`;
+                return;
+            }
+
+            const events = data.events || [];
+
+            if (events.length === 0) {
+                container.innerHTML = '<p style="color: #999; padding: 2rem; text-align: center;">No events found</p>';
+                return;
+            }
+
+            // Build events table
+            let html = '<table class="admin-table"><thead><tr><th>Event ID</th><th>Name</th><th>Organization</th><th>Status</th><th>Items</th><th>Actions</th></tr></thead><tbody>';
+
+            events.forEach(event => {
+                const status = event.is_active ? '<span style="color: green;">Active</span>' : '<span style="color: red;">Inactive</span>';
+                html += `
+                    <tr>
+                        <td>${event.id}</td>
+                        <td><strong>${event.name}</strong></td>
+                        <td>${event.organization_name || 'N/A'}</td>
+                        <td>${status}</td>
+                        <td>${event.item_count || 0}</td>
+                        <td>
+                            <button class="btn btn-small" onclick="AdminDashboard.editEvent(${event.id})">Edit</button>
+                            <button class="btn btn-small btn-secondary" onclick="AdminDashboard.viewEventSettings(${event.id})">Settings</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        }
+    },
+
+    editEvent(eventId) {
+        alert('Event editing coming soon. Event ID: ' + eventId);
+    },
+
+    viewEventSettings(eventId) {
+        alert('Event settings coming soon. Event ID: ' + eventId);
     },
 
     async loadAdminAccounts() {

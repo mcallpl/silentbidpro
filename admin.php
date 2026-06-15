@@ -81,6 +81,7 @@ $page_title = APP_NAME . ' — Admin Dashboard';
             <button class="nav-tab" data-section="users">Bidders</button>
             <button class="nav-tab" data-section="bids">Bids</button>
             <button class="nav-tab" data-section="transactions">Transactions</button>
+            <button class="nav-tab" data-section="events" style="background-color: #f0e8f8; font-weight: bold;">📅 Events</button>
             <button class="nav-tab" data-section="admins" style="background-color: #e8f4f8; font-weight: bold;">👤 Admin Control</button>
         </nav>
 
@@ -228,6 +229,17 @@ $page_title = APP_NAME . ' — Admin Dashboard';
                     <p class="loading">Loading bids...</p>
                 </div>
                 <div id="bidsPagination" class="pagination" style="display: none; margin-top: 1rem;"></div>
+            </section>
+
+            <!-- Events Section -->
+            <section id="eventsSection" class="admin-section">
+                <h2>📅 Events Management</h2>
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <button id="createEventBtn" class="btn btn-primary">Create New Event</button>
+                </div>
+                <div id="eventsContainer" class="data-table">
+                    <p class="loading">Loading events...</p>
+                </div>
             </section>
 
             <!-- Admin Control Section (Super Admin Only) -->
