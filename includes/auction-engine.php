@@ -8,6 +8,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/db-helpers.php';
 require_once __DIR__ . '/notifications.php';
 require_once __DIR__ . '/payment-requests.php';
+require_once __DIR__ . '/event-notifier.php';
 
 /**
  * Close expired auctions and process winners
@@ -96,7 +97,10 @@ function processWinner($item_id, $user_id, $amount, $item_title, $phone_number) 
     $checkout_url = APP_DOMAIN . '/checkout.php?item_id=' . urlencode($item_id)
         . '&user_id=' . urlencode($user_id);
 
-    // Send winner notification
+    // Send push and SMS notifications
+    notifyWinner($item_id, $user_id, $item_title, $amount);
+
+    // Also send SMS (keep for high-priority outreach)
     $sms_sent = sendWinnerNotification($phone_number, $item_title, $amount, $checkout_url);
 
     if (!$sms_sent) {

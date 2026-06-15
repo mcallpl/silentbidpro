@@ -71,6 +71,13 @@ if (!defined('ADMIN_TOKEN')) {
 // ============================================================
 if (!defined('REBRANDLY_API_KEY')) define('REBRANDLY_API_KEY', $vault_rebrandly_api_key ?? '');
 
+// ============================================================
+// WEB PUSH (VAPID) CONFIGURATION
+// ============================================================
+if (!defined('VAPID_PUBLIC_KEY')) define('VAPID_PUBLIC_KEY', $vault_sbb_vapid_public_key ?? '');
+if (!defined('VAPID_PRIVATE_KEY')) define('VAPID_PRIVATE_KEY', $vault_sbb_vapid_private_key ?? '');
+if (!defined('VAPID_SUBJECT')) define('VAPID_SUBJECT', 'mailto:' . ($vault_contact_email ?? 'noreply@silentbidbuddy.com'));
+
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', __DIR__ . '/uploads/');
 if (!defined('QR_CODES_DIR')) define('QR_CODES_DIR', __DIR__ . '/qr_codes/');
 

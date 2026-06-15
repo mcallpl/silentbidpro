@@ -79,7 +79,7 @@ function renderPublicMessagePage($options = []) {
             'description' => $message
         ]); ?>
     </head>
-    <body class="items-list-page message-page">
+    <body class="items-list-page message-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">
         <?php renderPublicHeader(['user' => $user]); ?>
         <main class="container">
             <section class="public-message-card">
@@ -97,6 +97,7 @@ function renderPublicMessagePage($options = []) {
                 </div>
             </section>
         </main>
+        <script src="js/push-notifications.js"></script>
         <script src="js/app.js"></script>
     </body>
     </html>

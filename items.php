@@ -87,7 +87,7 @@ $page_title = $event_name . ' - ' . APP_NAME;
         'description' => 'Browse auction items, place secure bids, and support a meaningful fundraising event with Silent Bid Buddy.'
     ]); ?>
 </head>
-<body class="items-list-page">
+<body class="items-list-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">
     <?php renderPublicHeader(['user' => $user]); ?>
 
     <div class="container items-container">
@@ -275,6 +275,7 @@ $page_title = $event_name . ' - ' . APP_NAME;
         </section>
     </div>
 
+    <script src="js/push-notifications.js"></script>
     <script src="js/app.js"></script>
     <script>
         document.querySelectorAll('.js-watch-item').forEach((button) => {

@@ -362,6 +362,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.SBB && window.SBB.UI) {
         window.SBB.UI.init();
     }
+
+    // Initialize push notifications if user is authenticated
+    if (window.SBB && window.SBB.PushNotifications && SBB.API.getSessionToken()) {
+        const vapidKey = document.body.getAttribute('data-vapid-public-key');
+        if (vapidKey) {
+            SBB.PushNotifications.init(vapidKey);
+        }
+    }
 });
 
 // Export for use in other scripts

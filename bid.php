@@ -23,7 +23,7 @@ $page_title = APP_NAME . ' - Bidder Sign In';
         'description' => 'Sign in to Silent Bid Buddy and start bidding in a polished, secure nonprofit auction experience.'
     ]); ?>
 </head>
-<body class="auth-page">
+<body class="auth-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">
     <div class="container">
         <div class="auth-splash">
             <div class="splash-header">
@@ -115,6 +115,7 @@ $page_title = APP_NAME . ' - Bidder Sign In';
         </div>
     </div>
 
+    <script src="js/push-notifications.js"></script>
     <script src="js/app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

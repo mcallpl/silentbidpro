@@ -202,7 +202,7 @@ $page_title = 'My Bids - ' . APP_NAME;
         'description' => 'Track your Silent Bid Buddy bids, watched items, winning status, and checkout steps.'
     ]); ?>
 </head>
-<body class="items-list-page my-bids-page">
+<body class="items-list-page my-bids-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">
     <?php renderPublicHeader(['back_href' => 'items.php', 'back_label' => '← Items', 'user' => $user]); ?>
 
     <main class="container my-bids-container">
@@ -271,6 +271,7 @@ $page_title = 'My Bids - ' . APP_NAME;
             </section>
         <?php endif; ?>
     </main>
+    <script src="js/push-notifications.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

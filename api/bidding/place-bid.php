@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../includes/db-helpers.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/bidding.php';
 require_once __DIR__ . '/../../includes/notifications.php';
+require_once __DIR__ . '/../../includes/event-notifier.php';
 
 header('Content-Type: application/json');
 
@@ -64,17 +65,18 @@ if ($result['status'] !== 'success') {
 
 error_log('[BID] ✓ SUCCESS - Bid ' . $result['bid_id'] . ' placed for $' . $bid_amount);
 
-// Send outbid alert to previous bidder if applicable
+// Send notifications to previous bidder if applicable
 if ($result['previous_high_bidder_id']) {
-    $previous_bidder = dbGetRow(
-        "SELECT phone_number, full_name FROM users WHERE id = ?",
-        [(int)$result['previous_high_bidder_id']]
-    );
+    $item = getItemState($item_id);
 
-    if ($previous_bidder) {
-        $item = getItemState($item_id);
-        sendOutbidAlert($previous_bidder['phone_number'], $item['title'], $item_id);
-    }
+    // Unified notification dispatch (push + SMS)
+    notifyBidPlaced(
+        $item_id,
+        $user['id'],
+        $result['previous_high_bidder_id'],
+        $item['title'],
+        $bid_amount
+    );
 }
 
 http_response_code(200);

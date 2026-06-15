@@ -81,7 +81,7 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
         'type' => 'product'
     ]); ?>
 </head>
-<body class="item-page">
+<body class="item-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">
     <?php renderPublicHeader(['back_href' => 'items.php', 'back_label' => '← Items', 'user' => $user]); ?>
 
     <div class="container item-container">
@@ -237,6 +237,7 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
         </div>
     </div>
 
+    <script src="js/push-notifications.js"></script>
     <script src="js/app.js"></script>
     <script>
         // Pass data to JavaScript

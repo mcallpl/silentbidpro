@@ -2346,3 +2346,111 @@ body:not(.landing-page) {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
 }
+
+/* ============================================================
+   PUSH NOTIFICATION UI
+   ============================================================ */
+
+.notification-permission-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: var(--color-primary);
+    color: var(--color-white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    animation: slideUp 0.3s ease;
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+}
+
+.banner-text {
+    flex: 1;
+    font-size: var(--font-size-base);
+    line-height: 1.4;
+}
+
+.notification-permission-banner .btn {
+    white-space: nowrap;
+}
+
+.notification-permission-banner .btn-primary {
+    background: var(--color-accent);
+    color: var(--color-dark);
+}
+
+.notification-permission-banner .btn-primary:hover {
+    background: #e8a839;
+}
+
+.notification-permission-banner .btn-secondary {
+    background: transparent;
+    color: var(--color-white);
+    border: 1px solid rgba(255, 253, 248, 0.3);
+}
+
+.notification-permission-banner .btn-secondary:hover {
+    background: rgba(255, 253, 248, 0.1);
+}
+
+/* In-app notification toast (already exists, enhanced) */
+.sbb-notice {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    max-width: 400px;
+    background: #fff;
+    border-left: 4px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.sbb-notice.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.sbb-notice.is-error {
+    border-left-color: var(--color-error);
+    color: var(--color-error);
+}
+
+.sbb-notice.is-info {
+    border-left-color: var(--color-primary);
+    color: var(--color-dark);
+}
+
+@media (max-width: 640px) {
+    .notification-permission-banner {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+    }
+
+    .banner-content {
+        flex-wrap: wrap;
+    }
+
+    .sbb-notice {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+}

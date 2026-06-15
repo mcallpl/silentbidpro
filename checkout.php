@@ -63,7 +63,7 @@ $page_title = 'Checkout - ' . APP_NAME;
     ]); ?>
     <script src="https://js.stripe.com/v3/"></script>
 </head>
-<body class="checkout-page">
+<body class="checkout-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">
     <?php renderPublicHeader(['title' => APP_NAME . ' - Payment', 'back_href' => 'item.php?id=' . (int)$item['id'], 'back_label' => '← Item', 'user' => $user]); ?>
 
     <div class="container checkout-container">
@@ -97,6 +97,7 @@ $page_title = 'Checkout - ' . APP_NAME;
         </section>
     </div>
 
+    <script src="js/push-notifications.js"></script>
     <script src="js/app.js"></script>
     <script>
         window.SBB = window.SBB || {};
