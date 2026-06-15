@@ -10,9 +10,18 @@ require_once __DIR__ . '/includes/auction-closer.php';
 
 // Close expired auctions
 $result = closeExpiredAuctions();
+$closed_count = (int)($result['closed_count'] ?? 0);
+$error_count = count($result['errors'] ?? []);
+$message = $closed_count === 0
+    ? 'No expired auctions to close'
+    : "Closed {$closed_count} expired auction(s)";
+
+if ($error_count > 0) {
+    $message .= " with {$error_count} error(s)";
+}
 
 // Log the result
-$log_message = '[CRON] ' . date('Y-m-d H:i:s') . ' - ' . $result['message'];
+$log_message = '[CRON] ' . date('Y-m-d H:i:s') . ' - ' . $message;
 error_log($log_message);
 
 // Write to file for verification
@@ -22,5 +31,5 @@ error_log($log_message);
     FILE_APPEND
 );
 
-echo $result['message'];
+echo $message;
 ?>

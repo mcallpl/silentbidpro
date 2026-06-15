@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/db-helpers.php';
+require_once __DIR__ . '/payment-requests.php';
 
 /**
  * Create a Stripe Checkout Session for a winning bid
@@ -19,6 +20,20 @@ require_once __DIR__ . '/db-helpers.php';
  */
 function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_email = '') {
     try {
+        $payment_request = ensurePendingPaymentRequest($item_id, $user_id, $amount);
+        if (!$payment_request['success']) {
+            return ['success' => false, 'error' => 'Failed to create payment request'];
+        }
+
+        if ($payment_request['already_paid']) {
+            return ['success' => false, 'error' => 'This item has already been paid'];
+        }
+
+        $transaction_id = (int)($payment_request['transaction']['id'] ?? 0);
+        if (!$transaction_id) {
+            return ['success' => false, 'error' => 'Payment request is missing'];
+        }
+
         // Get or create Stripe customer
         $customer = getOrCreateStripeCustomer($user_id, $user_email);
         if (!$customer || empty($customer['id'])) {
@@ -38,7 +53,8 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             'success_url' => APP_DOMAIN . '/success.php?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => APP_DOMAIN . '/item.php?id=' . urlencode($item_id),
             'metadata[item_id]' => $item_id,
-            'metadata[user_id]' => $user_id
+            'metadata[user_id]' => $user_id,
+            'metadata[transaction_id]' => $transaction_id
         ];
 
         // Create Stripe checkout session via API
@@ -49,12 +65,7 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             return ['success' => false, 'error' => $error];
         }
 
-        // Store transaction record
-        dbInsert(
-            "INSERT INTO transactions (user_id, item_id, stripe_checkout_session_id, amount, status, created_at)
-             VALUES (?, ?, ?, ?, ?, NOW())",
-            [(int)$user_id, (int)$item_id, $response['id'], (float)$amount, 'pending']
-        );
+        attachCheckoutSessionToPaymentRequest($transaction_id, $response['id']);
 
         return [
             'success' => true,
@@ -128,11 +139,12 @@ function getOrCreateStripeCustomer($user_id, $email = '') {
  * @param string $signature Stripe signature header
  * @return bool
  */
-function handleStripeWebhook($event, $signature = '') {
+function handleStripeWebhook($event, $signature = '', $payload = '') {
     try {
         // Verify webhook signature if provided
         if ($signature && STRIPE_WEBHOOK_SECRET) {
-            if (!verifyStripeSignature($event, $signature)) {
+            $payload_to_verify = $payload !== '' ? $payload : json_encode($event);
+            if (!verifyStripeSignature($payload_to_verify, $signature)) {
                 error_log("Stripe webhook signature verification failed");
                 return false;
             }
@@ -165,27 +177,59 @@ function processCheckoutCompleted($session) {
     }
 
     try {
+        $transaction = getPaymentRequestByCheckoutSession($session['id']);
+
         // Get metadata
         $item_id = $session['metadata']['item_id'] ?? 0;
         $user_id = $session['metadata']['user_id'] ?? 0;
+        $amount = isset($session['amount_total'])
+            ? ((float)$session['amount_total'] / 100)
+            : null;
 
-        if (!$item_id || !$user_id) {
+        if (!$transaction && (!$item_id || !$user_id)) {
             error_log("Stripe webhook missing item_id or user_id");
             return false;
         }
 
-        // Update transaction status
+        if (!$transaction) {
+            if ($amount === null) {
+                $item = dbGetRow(
+                    "SELECT current_high_bid FROM items WHERE id = ?",
+                    [(int)$item_id]
+                );
+                $amount = (float)($item['current_high_bid'] ?? 0);
+            }
+
+            $payment_request = ensurePendingPaymentRequest($item_id, $user_id, $amount);
+            if (!$payment_request['success'] || $payment_request['already_paid']) {
+                return $payment_request['already_paid'] ?? false;
+            }
+
+            $transaction = $payment_request['transaction'];
+            attachCheckoutSessionToPaymentRequest((int)$transaction['id'], $session['id']);
+        }
+
+        $final_amount = $amount !== null
+            ? $amount
+            : (float)$transaction['amount'];
+
         dbUpdate(
-            "UPDATE transactions SET status = ?, stripe_payment_intent_id = ?
-             WHERE stripe_checkout_session_id = ?",
-            ['paid', $session['payment_intent'] ?? '', $session['id']]
+            "UPDATE transactions
+             SET status = ?, stripe_payment_intent_id = ?, amount = ?
+             WHERE id = ?",
+            ['paid', $session['payment_intent'] ?? '', $final_amount, (int)$transaction['id']]
         );
 
         // Log completion
         dbInsert(
             "INSERT INTO audit_log (event_type, user_id, item_id, description, created_at)
              VALUES (?, ?, ?, ?, NOW())",
-            ['PAYMENT_COMPLETED', (int)$user_id, (int)$item_id, 'Payment completed via Stripe']
+            [
+                'PAYMENT_COMPLETED',
+                (int)($user_id ?: $transaction['user_id']),
+                (int)($item_id ?: $transaction['item_id']),
+                'Payment completed via Stripe'
+            ]
         );
 
         return true;
@@ -196,20 +240,67 @@ function processCheckoutCompleted($session) {
 }
 
 /**
- * Verify Stripe webhook signature
- * @param array $event Event data
+ * Verify Stripe webhook signature.
+ * @param string $payload Raw request body
  * @param string $signature Signature header
  * @return bool
  */
-function verifyStripeSignature($event, $signature) {
+function verifyStripeSignature($payload, $signature) {
     if (!STRIPE_WEBHOOK_SECRET) {
         return false;
     }
 
-    $payload = file_get_contents('php://input');
-    $hash = hash_hmac('sha256', $payload, STRIPE_WEBHOOK_SECRET, false);
+    return verifyStripeSignatureHeader($payload, $signature, STRIPE_WEBHOOK_SECRET);
+}
 
-    return hash_equals($hash, $signature);
+/**
+ * Verify a Stripe-Signature header with the raw payload and endpoint secret.
+ * @param string $payload Raw request body
+ * @param string $signature Signature header
+ * @param string $secret Webhook signing secret
+ * @param int $tolerance_seconds Maximum timestamp age
+ * @return bool
+ */
+function verifyStripeSignatureHeader($payload, $signature, $secret, $tolerance_seconds = 300) {
+    if (!$payload || !$signature || !$secret) {
+        return false;
+    }
+
+    $timestamp = null;
+    $signatures = [];
+
+    foreach (explode(',', $signature) as $part) {
+        $pieces = explode('=', trim($part), 2);
+        if (count($pieces) !== 2) {
+            continue;
+        }
+
+        [$key, $value] = $pieces;
+        if ($key === 't') {
+            $timestamp = (int)$value;
+        } elseif ($key === 'v1') {
+            $signatures[] = $value;
+        }
+    }
+
+    if (!$timestamp || empty($signatures)) {
+        return false;
+    }
+
+    if ($tolerance_seconds > 0 && abs(time() - $timestamp) > $tolerance_seconds) {
+        return false;
+    }
+
+    $signed_payload = $timestamp . '.' . $payload;
+    $expected = hash_hmac('sha256', $signed_payload, $secret);
+
+    foreach ($signatures as $candidate) {
+        if (hash_equals($expected, $candidate)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**

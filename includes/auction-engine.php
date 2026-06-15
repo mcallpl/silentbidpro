@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/db-helpers.php';
 require_once __DIR__ . '/notifications.php';
+require_once __DIR__ . '/payment-requests.php';
 
 /**
  * Close expired auctions and process winners
@@ -80,16 +81,15 @@ function closeExpiredAuctions() {
  * @return bool Success/failure
  */
 function processWinner($item_id, $user_id, $amount, $item_title, $phone_number) {
-    // Create pending transaction
-    $transaction_id = dbInsert(
-        "INSERT INTO transactions (user_id, item_id, amount, status, created_at)
-         VALUES (?, ?, ?, ?, NOW())",
-        [(int)$user_id, (int)$item_id, (float)$amount, 'pending']
-    );
+    $payment_request = ensurePendingPaymentRequest($item_id, $user_id, $amount);
 
-    if (!$transaction_id) {
+    if (!$payment_request['success']) {
         error_log("Failed to create transaction for winner {$user_id} on item {$item_id}");
         return false;
+    }
+
+    if ($payment_request['already_paid'] || !$payment_request['created']) {
+        return true;
     }
 
     // Generate checkout URL
@@ -210,4 +210,3 @@ function getAuctionSummary() {
         'completion_rate' => $closed_items > 0 ? round(($closed_items / $total_items) * 100, 1) : 0
     ];
 }
-

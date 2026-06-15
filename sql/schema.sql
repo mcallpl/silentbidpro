@@ -88,24 +88,6 @@ CREATE TABLE IF NOT EXISTS categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
--- FAVORITES TABLE
--- Bidder watchlist for tracked items
--- ============================================================
-CREATE TABLE IF NOT EXISTS favorites (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id INT UNSIGNED NOT NULL,
-    item_id INT UNSIGNED NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
-    UNIQUE KEY uq_user_item_favorite (user_id, item_id),
-    INDEX idx_user_id (user_id),
-    INDEX idx_item_id (item_id),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ============================================================
 -- ITEMS TABLE (Auction items)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS items (
@@ -141,6 +123,24 @@ CREATE TABLE IF NOT EXISTS items (
     INDEX idx_current_high_bidder_id (current_high_bidder_id),
     INDEX idx_created_at (created_at),
     FULLTEXT INDEX ft_title_desc (title, description)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- FAVORITES TABLE
+-- Bidder watchlist for tracked items
+-- ============================================================
+CREATE TABLE IF NOT EXISTS favorites (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    item_id INT UNSIGNED NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_user_item_favorite (user_id, item_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_item_id (item_id),
+    INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

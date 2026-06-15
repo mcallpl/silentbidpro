@@ -34,8 +34,7 @@ if (!$event) {
 
 // Verify webhook signature
 if ($signature && STRIPE_WEBHOOK_SECRET) {
-    $expected_signature = hash_hmac('sha256', $payload, STRIPE_WEBHOOK_SECRET, false);
-    if (!hash_equals($expected_signature, $signature)) {
+    if (!verifyStripeSignature($payload, $signature)) {
         http_response_code(401);
         die(json_encode(['status' => 'error', 'message' => 'Invalid signature']));
     }

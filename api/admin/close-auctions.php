@@ -19,11 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 requireAdminAuth();
 
 $result = closeExpiredAuctions();
+$closed_count = (int)($result['closed_count'] ?? 0);
+$error_count = count($result['errors'] ?? []);
+$message = $closed_count === 0
+    ? 'No expired auctions to close'
+    : "Closed {$closed_count} expired auction(s) and prepared winner payment request(s)";
 
 http_response_code(200);
 echo json_encode([
     'status' => 'ok',
-    'closed' => $result['closed'],
-    'message' => $result['message']
+    'closed' => $closed_count,
+    'message' => $message,
+    'errors' => $result['errors'] ?? [],
+    'error_count' => $error_count
 ]);
 ?>
