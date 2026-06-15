@@ -87,10 +87,22 @@ const AdminDashboard = {
             const response = await fetch(this.config.apiBaseUrl + '/get-current-admin.php');
             const data = await response.json();
 
-            if (response.ok && data.status === 'ok' && data.admin.is_super_admin) {
-                const title = document.querySelector('.dashboard-title');
-                if (title) {
-                    title.textContent = title.textContent.replace(' — Admin', ' — Super Admin');
+            if (response.ok && data.status === 'ok') {
+                // Store super admin status for feature visibility
+                this.state.isSuperAdmin = data.admin.is_super_admin;
+
+                if (data.admin.is_super_admin) {
+                    // Update title for super admin
+                    const title = document.querySelector('.dashboard-title');
+                    if (title) {
+                        title.textContent = title.textContent.replace(' — Admin', ' — Super Admin');
+                    }
+
+                    // Show Events tab for super admins only
+                    const eventsTab = document.getElementById('eventsTab');
+                    if (eventsTab) {
+                        eventsTab.style.display = '';
+                    }
                 }
             }
         } catch (error) {
