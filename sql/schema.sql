@@ -12,17 +12,26 @@ USE silentbidbuddy;
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    phone_number VARCHAR(20) NOT NULL UNIQUE,
+    phone_number VARCHAR(20) NOT NULL,
     full_name VARCHAR(255),
     email VARCHAR(255),
     stripe_customer_id VARCHAR(255),
+    event_id INT UNSIGNED,
+    user_type ENUM('bidder', 'admin', 'viewer') DEFAULT 'bidder',
+    created_by_admin_id INT UNSIGNED,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
+    UNIQUE KEY uq_phone_event (phone_number, event_id),
     INDEX idx_phone_number (phone_number),
     INDEX idx_email (email),
     INDEX idx_stripe_customer_id (stripe_customer_id),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_event_id (event_id),
+    INDEX idx_user_type (user_type),
+    INDEX idx_created_by_admin (created_by_admin_id),
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by_admin_id) REFERENCES admin_accounts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
