@@ -123,6 +123,62 @@ function validateBidAmount($bid_amount, $current_high_bid, $min_increment, $star
 }
 
 /**
+ * Place a bid with MySQL transaction locking to prevent race conditions
+ * @param int $item_id Item ID
+ * @param int $user_id User ID
+ * @param float $bid_amount Bid amount
+ * @param float|null $max_bid_amount Optional max bid for proxy bidding
+ * @return array ['status' => 'success'|'error', 'message' => string, ...]
+ */
+function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
+    global $mysqli;
+
+    try {
+        // Start transaction with row-level locking
+        $mysqli->begin_transaction(MYSQLI_TRANS_START_READ_COMMITTED);
+
+        // Lock the item row for update - this prevents other transactions from modifying it
+        $lockStmt = $mysqli->prepare("SELECT current_high_bid, current_high_bidder_id, auction_end_time, is_closed FROM items WHERE id = ? FOR UPDATE");
+        if (!$lockStmt) {
+            throw new Exception("Prepare failed: " . $mysqli->error);
+        }
+
+        $lockStmt->bind_param('i', $item_id);
+        if (!$lockStmt->execute()) {
+            throw new Exception("Lock acquisition failed: " . $lockStmt->error);
+        }
+
+        $lockResult = $lockStmt->get_result();
+        if ($lockResult->num_rows === 0) {
+            $mysqli->rollback();
+            $lockStmt->close();
+            return ['status' => 'error', 'message' => 'Item not found'];
+        }
+
+        $lockResult->close();
+        $lockStmt->close();
+
+        // Now do the actual bid placement with the lock held
+        $result = placeBid($item_id, $user_id, $bid_amount, $max_bid_amount);
+
+        if ($result['status'] === 'success') {
+            $mysqli->commit();
+        } else {
+            $mysqli->rollback();
+        }
+
+        return $result;
+
+    } catch (Exception $e) {
+        if ($mysqli->inTransaction()) {
+            $mysqli->rollback();
+        }
+        error_log('[BID] Transaction error: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
+/**
  * Place a bid on an item
  * @param int $item_id Item ID
  * @param int $user_id User ID

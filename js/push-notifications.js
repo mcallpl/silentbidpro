@@ -150,14 +150,29 @@ SBB.PushNotifications = {
     },
 
     /**
-     * Send subscription endpoint to server
+     * Send subscription endpoint to server with validation
      */
     async sendSubscriptionToServer(subscription) {
         try {
+            // Validate subscription keys exist
+            const authKey = subscription.getKey('auth');
+            const p256dhKey = subscription.getKey('p256dh');
+
+            if (!authKey || !p256dhKey) {
+                console.error('[PUSH] Missing required subscription keys');
+                throw new Error('Invalid subscription keys');
+            }
+
+            // Validate endpoint format
+            if (!subscription.endpoint || !subscription.endpoint.startsWith('https://')) {
+                console.error('[PUSH] Invalid endpoint:', subscription.endpoint);
+                throw new Error('Invalid endpoint URL');
+            }
+
             const response = await SBB.API.post('/api/notifications/subscribe.php', {
                 endpoint: subscription.endpoint,
-                auth_key: this.arrayBufferToBase64(subscription.getKey('auth')),
-                p256dh_key: this.arrayBufferToBase64(subscription.getKey('p256dh')),
+                auth_key: this.arrayBufferToBase64(authKey),
+                p256dh_key: this.arrayBufferToBase64(p256dhKey),
                 browser_type: this.getBrowserType()
             });
 
@@ -168,11 +183,15 @@ SBB.PushNotifications = {
                     endpoint: subscription.endpoint,
                     timestamp: new Date().toISOString()
                 }));
+                return true;
             } else {
                 console.error('[PUSH] Server rejected subscription:', response.message);
+                return false;
             }
         } catch (error) {
             console.error('[PUSH] Failed to send subscription to server:', error);
+            SBB.UI.showNotice('Failed to save notification settings', 'error');
+            return false;
         }
     },
 

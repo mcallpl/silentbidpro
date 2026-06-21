@@ -51,8 +51,14 @@ if (!$item_id || $bid_amount <= 0) {
 // Log attempt
 error_log('[BID] User ' . $user['id'] . ' attempting bid of $' . $bid_amount . ' on item ' . $item_id);
 
-// Place bid
-$result = placeBid($item_id, $user['id'], $bid_amount, $max_bid_amount);
+// Place bid with transaction locking to prevent race conditions
+try {
+    $result = placeBidWithLocking($item_id, $user['id'], $bid_amount, $max_bid_amount);
+} catch (Exception $e) {
+    error_log('[BID] ❌ Transaction failed: ' . $e->getMessage());
+    http_response_code(500);
+    die(json_encode(['status' => 'error', 'message' => 'Failed to process bid']));
+}
 
 // Log result
 error_log('[BID] Result: ' . json_encode($result));

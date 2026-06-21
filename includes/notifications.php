@@ -7,21 +7,54 @@
 require_once __DIR__ . '/../config.php';
 
 /**
- * Send SMS via Twilio REST API
+ * Validate phone number format
+ * @param string $phone Phone number to validate
+ * @return bool Valid format
+ */
+function isValidPhoneNumber($phone) {
+    if (empty($phone)) {
+        return false;
+    }
+
+    // Basic validation: should start with + and contain only digits
+    return preg_match('/^\+\d{10,15}$/', $phone) === 1;
+}
+
+/**
+ * Send SMS via Twilio REST API with error tracking
  * @param string $to Recipient phone number (+1XXXXXXXXXX format)
  * @param string $message Message body (max 160 chars for best delivery)
- * @return bool Success/failure
+ * @param int|null $user_id Optional user ID for logging
+ * @return array ['success' => bool, 'message_sid' => string|null, 'error' => string|null]
  */
-function sendTwilioSMS($to, $message) {
+function sendTwilioSMS($to, $message, $user_id = null) {
+    // Validate phone number
+    if (!isValidPhoneNumber($to)) {
+        error_log("[SMS] Invalid phone number format: " . substr($to, 0, 5) . "***");
+        return [
+            'success' => false,
+            'message_sid' => null,
+            'error' => 'Invalid phone number format'
+        ];
+    }
+
     if (empty(TWILIO_ACCOUNT_SID) || empty(TWILIO_AUTH_TOKEN)) {
-        error_log("Twilio credentials not configured");
-        return false;
+        error_log("[SMS] Twilio credentials not configured");
+        return [
+            'success' => false,
+            'message_sid' => null,
+            'error' => 'SMS service not configured'
+        ];
     }
 
     // Ensure message is not too long
     if (strlen($message) > 1600) {
-        error_log("SMS message too long: " . strlen($message) . " chars");
-        return false;
+        error_log("[SMS] Message too long: " . strlen($message) . " chars");
+        return [
+            'success' => false,
+            'message_sid' => null,
+            'error' => 'Message exceeds maximum length'
+        ];
     }
 
     $url = 'https://api.twilio.com/2010-04-01/Accounts/' . TWILIO_ACCOUNT_SID . '/Messages.json';
@@ -43,14 +76,46 @@ function sendTwilioSMS($to, $message) {
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
 
-    if ($httpCode !== 201) {
-        error_log("Twilio API error ($httpCode): " . $response);
-        return false;
+    if ($curlError) {
+        error_log("[SMS] CURL error sending to $to: " . $curlError);
+        return [
+            'success' => false,
+            'message_sid' => null,
+            'error' => $curlError
+        ];
     }
 
-    return true;
+    if ($httpCode !== 201) {
+        error_log("[SMS] Twilio API error ($httpCode) sending to $to: " . substr($response, 0, 200));
+        return [
+            'success' => false,
+            'message_sid' => null,
+            'error' => "API returned HTTP $httpCode"
+        ];
+    }
+
+    // Parse response to get message SID
+    $responseData = json_decode($response, true);
+    $messageSid = $responseData['sid'] ?? null;
+
+    if (!$messageSid) {
+        error_log("[SMS] No message SID in response: " . substr($response, 0, 200));
+        return [
+            'success' => false,
+            'message_sid' => null,
+            'error' => 'Invalid API response'
+        ];
+    }
+
+    error_log("[SMS] ✓ Message sent successfully. SID: $messageSid");
+    return [
+        'success' => true,
+        'message_sid' => $messageSid,
+        'error' => null
+    ];
 }
 
 /**
@@ -58,13 +123,14 @@ function sendTwilioSMS($to, $message) {
  * @param string $phone Phone number of outbid user
  * @param string $item_title Item title
  * @param int $item_id Item ID
- * @return bool
+ * @param int|null $user_id Optional user ID for logging
+ * @return array Result with success status
  */
-function sendOutbidAlert($phone, $item_title, $item_id) {
+function sendOutbidAlert($phone, $item_title, $item_id, $user_id = null) {
     $item_url = APP_DOMAIN . '/item.php?id=' . urlencode($item_id);
     $message = "You've been outbid on '{$item_title}'! Bid again: {$item_url}";
 
-    return sendTwilioSMS($phone, $message);
+    return sendTwilioSMS($phone, $message, $user_id);
 }
 
 /**
@@ -73,20 +139,21 @@ function sendOutbidAlert($phone, $item_title, $item_id) {
  * @param string $item_title Item title
  * @param float $winning_amount Winning bid amount
  * @param string $checkout_url Stripe checkout URL
- * @return bool
+ * @param int|null $user_id Optional user ID for logging
+ * @return array Result with success status
  */
-function sendWinnerNotification($phone, $item_title, $winning_amount, $checkout_url) {
+function sendWinnerNotification($phone, $item_title, $winning_amount, $checkout_url, $user_id = null) {
     $message = "Congratulations! You won '{$item_title}' for \${$winning_amount}. "
         . "Complete payment: {$checkout_url}";
 
-    return sendTwilioSMS($phone, $message);
+    return sendTwilioSMS($phone, $message, $user_id);
 }
 
 /**
  * Send verification code via SMS
  * @param string $phone Phone number
  * @param string $code 6-digit code
- * @return bool
+ * @return array Result with success status
  */
 function sendVerificationCode($phone, $code) {
     $message = "Your " . APP_NAME . " verification code is: {$code}. "
@@ -100,7 +167,7 @@ function sendVerificationCode($phone, $code) {
  * @param string $admin_phone Admin phone number
  * @param int $item_count Number of items closed
  * @param float $total_raised Total amount raised
- * @return bool
+ * @return array Result with success status
  */
 function sendAuctionClosedNotification($admin_phone, $item_count, $total_raised) {
     $message = "Auction complete! Closed {$item_count} items. "
