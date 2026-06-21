@@ -122,9 +122,14 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
                 <?php echo htmlspecialchars($item['description']); ?>
             </p>
             <?php if ($item['fair_market_value']): ?>
-                <p class="fair-market-value">
-                    Fair Market Value: <span class="value">$<?php echo number_format($item['fair_market_value'], 2); ?></span>
-                </p>
+                <div class="fair-market-value-detail">
+                    <p class="fair-market-value">
+                        💰 <strong>Fair Market Value:</strong> <span class="value">$<?php echo number_format($item['fair_market_value'], 2); ?></span>
+                    </p>
+                    <p class="fair-market-value-note">
+                        This is the estimated retail value of the item. Your bid amount can be higher or lower.
+                    </p>
+                </div>
             <?php endif; ?>
         </section>
 

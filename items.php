@@ -194,8 +194,8 @@ $page_title = $event_name . ' - ' . APP_NAME;
                                     </div>
 
                                     <div class="bid-stat">
-                                        <span class="label">Starting:</span>
-                                        <span class="value">$<?php echo number_format($item['starting_bid'], 2); ?></span>
+                                        <span class="label">Fair Market Value:</span>
+                                        <span class="value"><?php echo !empty($item['fair_market_value']) ? '$' . number_format($item['fair_market_value'], 2) : '—'; ?></span>
                                     </div>
                                 </div>
 

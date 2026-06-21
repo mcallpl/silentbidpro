@@ -44,7 +44,13 @@
     }
 
     .btn-large {
-        padding: var(--spacing-md);
+        min-height: 44px;
+        padding: 8px var(--spacing-md);
+    }
+
+    .btn {
+        min-height: 44px;
+        padding: 8px 12px;
     }
 
     .modal-content {
@@ -146,6 +152,7 @@
         max-inline-size: calc(100vw - 2rem);
         margin-right: auto;
         overflow: visible;
+        gap: 12px;
     }
 
     .landing-btn {
