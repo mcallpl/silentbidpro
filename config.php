@@ -36,7 +36,7 @@ if (!defined('DB_NAME')) define('DB_NAME', 'silentbidbuddy');
 // ============================================================
 if (!defined('STRIPE_SECRET_KEY')) define('STRIPE_SECRET_KEY', $vault_stripe_secret_key ?? '');
 if (!defined('STRIPE_PUBLISHABLE_KEY')) define('STRIPE_PUBLISHABLE_KEY', $vault_stripe_publishable_key ?? '');
-if (!defined('STRIPE_WEBHOOK_SECRET')) define('STRIPE_WEBHOOK_SECRET', $vault_stripe_webhook_secrets['silentbidbuddy'] ?? '');
+if (!defined('STRIPE_WEBHOOK_SECRET')) define('STRIPE_WEBHOOK_SECRET', $vault_stripe_webhook_secrets['SilentBidBuddy'] ?? '');
 
 // ============================================================
 // TWILIO CONFIGURATION
