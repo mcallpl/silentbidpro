@@ -122,7 +122,7 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
 
         // Prepare checkout session data
         $session_data = [
-            'payment_method_types' => 'card',
+            'payment_method_types[0]' => 'card',
             'customer' => $customer['id'],
             'line_items[0][price_data][currency]' => 'usd',
             'line_items[0][price_data][product_data][name]' => $item_title,

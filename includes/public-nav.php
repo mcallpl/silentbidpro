@@ -22,7 +22,7 @@ function renderPublicHeader($options = []) {
             <?php endif; ?>
         </div>
 
-        <h1><?php echo htmlspecialchars($title); ?></h1>
+        <h1><a href="items.php" class="app-header-home" style="color: inherit; text-decoration: none;"><?php echo htmlspecialchars($title); ?></a></h1>
 
         <button
             type="button"

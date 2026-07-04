@@ -211,6 +211,13 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
         return ['status' => 'error', 'message' => 'Auction time has expired'];
     }
 
+    // You can't outbid yourself — if you're already the highest bidder there's
+    // nothing to raise. This is what allowed the same amount to be submitted
+    // repeatedly on an item you were already winning.
+    if ((int)($item['current_high_bidder_id'] ?? 0) === (int)$user_id) {
+        return ['status' => 'error', 'message' => "You're already the highest bidder on this item."];
+    }
+
     // Validate bid amount
     $validation = validateBidAmount(
         $bid_amount,
