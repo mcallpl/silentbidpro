@@ -146,6 +146,6 @@ foreach ($srcItems as $it) {
 }
 line("Copied {$copied} item(s) into the new event.");
 
-$domain = defined('APP_DOMAIN') ? rtrim(APP_DOMAIN, '/') : 'https://silentbidbuddy.peoplestar.com';
+$domain = defined('APP_DOMAIN') ? rtrim(APP_DOMAIN, '/') : 'https://silentbidpro.peoplestar.com';
 line('');
 line("New auction link: {$domain}/items.php?event={$newSlug}");

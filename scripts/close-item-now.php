@@ -11,7 +11,7 @@
 // timer has passed).
 //
 // Web (recommended): sign in to the admin console first, then visit
-//     https://silentbidbuddy.peoplestar.com/scripts/close-item-now.php?id=5
+//     https://silentbidpro.peoplestar.com/scripts/close-item-now.php?id=5
 //   The admin session cookie authorizes the request.
 //
 // CLI (on the server):

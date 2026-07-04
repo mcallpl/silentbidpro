@@ -601,7 +601,7 @@ assert($ratio >= 4.5);
 
 ## License & Credits
 
-Created for Silent Bid Buddy fundraising platform.
+Created for Silent Bid Pro fundraising platform.
 All colors, styling, and branding defaults designed for optimal accessibility and user experience.
 
 See BRANDING_SYSTEM.md for complete documentation.

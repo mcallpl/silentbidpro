@@ -25,7 +25,7 @@ header('Content-Type: text/html; charset=UTF-8');
 </head>
 <body>
 
-<h1>🔍 SILENT BID BUDDY DIAGNOSTIC</h1>
+<h1>🔍 SILENT BID PRO DIAGNOSTIC</h1>
 <p>Last check: <?php echo date('Y-m-d H:i:s'); ?></p>
 
 <div class="section">

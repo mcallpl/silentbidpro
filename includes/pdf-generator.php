@@ -53,7 +53,7 @@ class ItemPDFGenerator {
 
         // CRITICAL: Always use production domain for QR codes (users access via phone)
         // Never use localhost - it won't work when scanned by phones
-        $productionDomain = 'https://silentbidbuddy.com';
+        $productionDomain = 'https://silentbidpro.com';
         $bidUrl = $this->shortUrl ?? ($productionDomain . '/item.php?id=' . (int)$item['id']);
         $url = htmlspecialchars($bidUrl);
         $qrUrl = QRCodeGenerator::getQRUrl($bidUrl);
@@ -382,7 +382,7 @@ class ItemPDFGenerator {
                 <div class="info-box">
                     <span class="info-box-label">HOUSE</span>
                     <span class="company-name">Silent</span>
-                    <span class="company-tag">Bid Buddy</span>
+                    <span class="company-tag">Bid Pro</span>
                 </div>
 
                 <div class="info-box">
@@ -393,7 +393,7 @@ class ItemPDFGenerator {
         </div>
 
         <!-- FOOTER -->
-        <div class="footer">PROFESSIONAL AUCTION PLATFORM • SILENTBIDBUDDY.COM</div>
+        <div class="footer">PROFESSIONAL AUCTION PLATFORM • SILENTBIDPRO.COM</div>
     </div>
 </body>
 </html>

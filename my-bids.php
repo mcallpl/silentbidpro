@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — My Bids
+// SILENT BID PRO — My Bids
 // Bidder status dashboard for watched, active, won, and unpaid items
 // ============================================================
 
@@ -201,7 +201,7 @@ $page_title = 'My Bids - ' . APP_NAME;
 <head>
     <?php renderPageMeta([
         'title' => $page_title,
-        'description' => 'Track your Silent Bid Buddy bids, watched items, winning status, and checkout steps.'
+        'description' => 'Track your Silent Bid Pro bids, watched items, winning status, and checkout steps.'
     ]); ?>
 </head>
 <body class="items-list-page my-bids-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">

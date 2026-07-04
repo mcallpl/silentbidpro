@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Checkout Page
+// SILENT BID PRO — Checkout Page
 // Stripe Checkout integration
 // ============================================================
 
@@ -63,7 +63,7 @@ $branding = getBrandingData();
 <head>
     <?php renderPageMeta([
         'title' => $page_title,
-        'description' => 'Complete your secure Silent Bid Buddy auction payment.'
+        'description' => 'Complete your secure Silent Bid Pro auction payment.'
     ]); ?>
     <script src="https://js.stripe.com/v3/"></script>
 </head>

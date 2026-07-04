@@ -56,13 +56,13 @@ echo ""
 
 # TEST 3: Link Path Consistency
 echo "🔍 TEST 3: Link Path Consistency (must be RELATIVE)"
-ABSOLUTE_LINKS=$(grep -r '/silentbidbuddy/' --include="*.php" --include="*.js" --include="*.html" . 2>/dev/null | grep -v node_modules | grep -v ".git" | wc -l)
+ABSOLUTE_LINKS=$(grep -r '/silentbidpro/' --include="*.php" --include="*.js" --include="*.html" . 2>/dev/null | grep -v node_modules | grep -v ".git" | wc -l)
 
 if [ "$ABSOLUTE_LINKS" -eq 0 ]; then
-    echo -e "${GREEN}✓ No hardcoded /silentbidbuddy/ paths found${NC}"
+    echo -e "${GREEN}✓ No hardcoded /silentbidpro/ paths found${NC}"
 else
-    echo -e "${RED}✗ FOUND $ABSOLUTE_LINKS instances of hardcoded /silentbidbuddy/ paths:${NC}"
-    grep -r '/silentbidbuddy/' --include="*.php" --include="*.js" --include="*.html" . 2>/dev/null | grep -v node_modules | grep -v ".git" | head -5
+    echo -e "${RED}✗ FOUND $ABSOLUTE_LINKS instances of hardcoded /silentbidpro/ paths:${NC}"
+    grep -r '/silentbidpro/' --include="*.php" --include="*.js" --include="*.html" . 2>/dev/null | grep -v node_modules | grep -v ".git" | head -5
     FAILED=1
 fi
 echo ""

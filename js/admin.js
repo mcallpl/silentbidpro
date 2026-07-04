@@ -1,5 +1,5 @@
 // ============================================================
-// SILENT BID BUDDY — Admin Dashboard JavaScript
+// SILENT BID PRO — Admin Dashboard JavaScript
 // Handles authentication, metrics polling, CRUD operations
 // ============================================================
 
@@ -1143,7 +1143,7 @@ const AdminDashboard = {
     },
 
     async deleteUser(userId, userName) {
-        const confirmed = window.confirm('Delete ' + userName + '? This removes their bidder sign-in record. If they have protected auction history, Silent Bid Buddy will keep the record and tell you why.');
+        const confirmed = window.confirm('Delete ' + userName + '? This removes their bidder sign-in record. If they have protected auction history, Silent Bid Pro will keep the record and tell you why.');
         if (!confirmed) return;
 
         try {

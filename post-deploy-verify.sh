@@ -14,8 +14,8 @@ NC='\033[0m'
 
 FAILED=0
 DO_SERVER="root@64.227.108.128"
-DO_PATH="/var/www/html/silentbidbuddy"
-APP_URL="https://silentbidbuddy.com"
+DO_PATH="/var/www/html/silentbidpro"
+APP_URL="https://silentbidpro.com"
 
 echo "=================================="
 echo "POST-DEPLOYMENT VERIFICATION"
@@ -105,7 +105,7 @@ fi
 echo ""
 
 # TEST 7: CSS/JS Paths (must be relative)
-echo "🔍 TEST 7: CSS/JS Paths (must be relative, not /silentbidbuddy/)"
+echo "🔍 TEST 7: CSS/JS Paths (must be relative, not /silentbidpro/)"
 CSS_PATH=$(curl -s "$APP_URL" | grep 'href="css' | head -1)
 if echo "$CSS_PATH" | grep -q 'href="css/'; then
     echo -e "${GREEN}✓ CSS uses relative paths${NC}"
@@ -147,13 +147,13 @@ else
 fi
 echo ""
 
-# TEST 10: No /silentbidbuddy/ paths on production
-echo "🔍 TEST 10: No Hardcoded /silentbidbuddy/ Paths"
-HARDCODED=$(ssh $DO_SERVER "grep -r '/silentbidbuddy/' $DO_PATH --include='*.php' --include='*.html' 2>/dev/null | wc -l")
+# TEST 10: No /silentbidpro/ paths on production
+echo "🔍 TEST 10: No Hardcoded /silentbidpro/ Paths"
+HARDCODED=$(ssh $DO_SERVER "grep -r '/silentbidpro/' $DO_PATH --include='*.php' --include='*.html' 2>/dev/null | wc -l")
 if [ "$HARDCODED" -eq 0 ]; then
-    echo -e "${GREEN}✓ No hardcoded /silentbidbuddy/ paths on production${NC}"
+    echo -e "${GREEN}✓ No hardcoded /silentbidpro/ paths on production${NC}"
 else
-    echo -e "${RED}✗ Found $HARDCODED hardcoded /silentbidbuddy/ paths${NC}"
+    echo -e "${RED}✗ Found $HARDCODED hardcoded /silentbidpro/ paths${NC}"
     FAILED=1
 fi
 echo ""

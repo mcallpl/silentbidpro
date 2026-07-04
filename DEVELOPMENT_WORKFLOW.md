@@ -12,7 +12,7 @@ Opens at: **http://localhost:8000**
 
 ### 2️⃣ Make Your Changes Locally
 
-Edit files in `/Users/chipmcallister/Projects/silentbidbuddy/`
+Edit files in `/Users/chipmcallister/Projects/silentbidpro/`
 
 ### 3️⃣ Test Locally Before Pushing
 
@@ -66,12 +66,12 @@ The app automatically detects where it's running:
 - QR codes = http://localhost:8000/item-qr.php
 ```
 
-**Production (silentbidbuddy.peoplestar.com)**
+**Production (silentbidpro.peoplestar.com)**
 ```
-- APP_DOMAIN = https://silentbidbuddy.peoplestar.com
+- APP_DOMAIN = https://silentbidpro.peoplestar.com
 - CSS links = css/main.css (relative)
 - API calls = /api/admin/...
-- QR codes = https://silentbidbuddy.peoplestar.com/item-qr.php
+- QR codes = https://silentbidpro.peoplestar.com/item-qr.php
 ```
 
 ✅ **Same code works in both places!**
@@ -101,7 +101,7 @@ The app automatically detects where it's running:
 # 7. Verify production is healthy
 ./post-deploy-verify.sh
 
-# Done! Changes are live on https://silentbidbuddy.peoplestar.com
+# Done! Changes are live on https://silentbidpro.peoplestar.com
 ```
 
 ---

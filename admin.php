@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Admin Dashboard
+// SILENT BID PRO — Admin Dashboard
 // Comprehensive admin interface for auction management
 // ============================================================
 
@@ -16,7 +16,7 @@ $page_title = APP_NAME . ' — Admin Dashboard';
 <head>
     <?php renderPageMeta([
         'title' => $page_title,
-        'description' => 'Silent Bid Buddy administrator dashboard.',
+        'description' => 'Silent Bid Pro administrator dashboard.',
         'stylesheets' => ['css/main.css', 'css/admin.css']
     ]); ?>
 </head>
@@ -327,7 +327,7 @@ $page_title = APP_NAME . ' — Admin Dashboard';
                     ></textarea>
                     <div class="ai-item-note">
                         <strong>Image assist:</strong>
-                        A detailed description helps Silent Bid Buddy create a polished item image for cards, catalogs, and print materials. Use concrete details like setting, style, colors, audience, and what the bidder receives.
+                        A detailed description helps Silent Bid Pro create a polished item image for cards, catalogs, and print materials. Use concrete details like setting, style, colors, audience, and what the bidder receives.
                     </div>
                     <div id="descriptionImproveResult" class="description-improve-result" style="display: none;"></div>
                 </div>

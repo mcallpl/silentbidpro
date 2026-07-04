@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Push Notification Unsubscription
+// SILENT BID PRO — Push Notification Unsubscription
 // Mark subscription as inactive
 // ============================================================
 

@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Items Listing
+// SILENT BID PRO — Items Listing
 // Browse all active auction items
 // ============================================================
 
@@ -86,7 +86,7 @@ $page_title = $event_name . ' - ' . APP_NAME;
 <head>
     <?php renderPageMeta([
         'title' => $page_title,
-        'description' => 'Browse auction items, place secure bids, and support a meaningful fundraising event with Silent Bid Buddy.'
+        'description' => 'Browse auction items, place secure bids, and support a meaningful fundraising event with Silent Bid Pro.'
     ]); ?>
 </head>
 <body class="items-list-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">

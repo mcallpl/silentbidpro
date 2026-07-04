@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Central Configuration
+// SILENT BID PRO — Central Configuration
 // Loads vault secrets and establishes database connection
 // ============================================================
 
@@ -29,7 +29,7 @@ date_default_timezone_set('America/Los_Angeles');
 if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
 if (!defined('DB_USER')) define('DB_USER', $vault_db_user ?? 'root');
 if (!defined('DB_PASS')) define('DB_PASS', $vault_db_pass ?? '');
-if (!defined('DB_NAME')) define('DB_NAME', 'silentbidbuddy');
+if (!defined('DB_NAME')) define('DB_NAME', 'silentbidpro');
 
 // ============================================================
 // STRIPE CONFIGURATION
@@ -76,7 +76,7 @@ if (!defined('REBRANDLY_API_KEY')) define('REBRANDLY_API_KEY', $vault_rebrandly_
 // ============================================================
 if (!defined('VAPID_PUBLIC_KEY')) define('VAPID_PUBLIC_KEY', $vault_sbb_vapid_public_key ?? '');
 if (!defined('VAPID_PRIVATE_KEY')) define('VAPID_PRIVATE_KEY', $vault_sbb_vapid_private_key ?? '');
-if (!defined('VAPID_SUBJECT')) define('VAPID_SUBJECT', 'mailto:' . ($vault_contact_email ?? 'noreply@silentbidbuddy.com'));
+if (!defined('VAPID_SUBJECT')) define('VAPID_SUBJECT', 'mailto:' . ($vault_contact_email ?? 'noreply@silentbidpro.com'));
 
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', __DIR__ . '/uploads/');
 if (!defined('QR_CODES_DIR')) define('QR_CODES_DIR', __DIR__ . '/qr_codes/');
@@ -90,13 +90,13 @@ if (!defined('APP_DOMAIN')) {
         define('APP_DOMAIN', getenv('APP_DOMAIN') ?: 'http://localhost:8000');
     }
 }
-if (!defined('APP_NAME')) define('APP_NAME', 'Silent Bid Buddy');
+if (!defined('APP_NAME')) define('APP_NAME', 'Silent Bid Pro');
 
 // Verbose debug logging (full SQL, session-token fragments, cookie dumps). Off by
 // default so production logs don't leak sensitive data; enable via the
 // SBB_DEBUG_LOG environment variable when diagnosing an issue.
 if (!defined('DEBUG_LOG')) define('DEBUG_LOG', getenv('SBB_DEBUG_LOG') === '1');
-if (!defined('PUBLIC_SITE_URL')) define('PUBLIC_SITE_URL', getenv('PUBLIC_SITE_URL') ?: 'https://silentbidbuddy.com');
+if (!defined('PUBLIC_SITE_URL')) define('PUBLIC_SITE_URL', getenv('PUBLIC_SITE_URL') ?: 'https://silentbidpro.com');
 
 // ============================================================
 // COOKIE CONFIGURATION (for session persistence)

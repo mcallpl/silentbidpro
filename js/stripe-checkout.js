@@ -1,5 +1,5 @@
 /**
- * SILENT BID BUDDY — Stripe Checkout
+ * SILENT BID PRO — Stripe Checkout
  * Payment processing via Stripe Checkout
  */
 

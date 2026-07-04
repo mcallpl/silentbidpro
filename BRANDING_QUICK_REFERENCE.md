@@ -2,7 +2,7 @@
 
 ## One-Minute Overview
 
-Silent Bid Buddy now has a **comprehensive CSS branding system** that dynamically colors the entire UI based on event configuration. No hardcoding colors. No JavaScript required.
+Silent Bid Pro now has a **comprehensive CSS branding system** that dynamically colors the entire UI based on event configuration. No hardcoding colors. No JavaScript required.
 
 ## What Changed?
 

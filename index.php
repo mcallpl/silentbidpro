@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Public Landing Page
+// SILENT BID PRO — Public Landing Page
 // Professional front door for bidders, nonprofits, and admins.
 // ============================================================
 
@@ -16,14 +16,14 @@ $branding = getBrandingData();
 <head>
     <?php renderPageMeta([
         'title' => $page_title,
-        'description' => 'Silent Bid Buddy helps nonprofits run polished silent auctions with beautiful item pages, secure bidding, bidder reminders, admin tools, and donor-friendly checkout.'
+        'description' => 'Silent Bid Pro helps nonprofits run polished silent auctions with beautiful item pages, secure bidding, bidder reminders, admin tools, and donor-friendly checkout.'
     ]); ?>
 </head>
 <body class="landing-page">
-    <header class="landing-nav" aria-label="Silent Bid Buddy navigation">
-        <a class="landing-brand" href="index.php" aria-label="Silent Bid Buddy home">
+    <header class="landing-nav" aria-label="Silent Bid Pro navigation">
+        <a class="landing-brand" href="index.php" aria-label="Silent Bid Pro home">
             <img src="images/brand/favicon.svg" alt="" />
-            <span>Silent Bid Buddy</span>
+            <span>Silent Bid Pro</span>
         </a>
         <nav class="landing-nav-links" aria-label="Primary links">
             <a href="#experience">Experience</a>
@@ -49,7 +49,7 @@ $branding = getBrandingData();
                     <span>heart.</span>
                 </h1>
                 <p class="landing-hero-copy">
-                    Silent Bid Buddy gives your auction a polished digital home, helps bidders feel informed,
+                    Silent Bid Pro gives your auction a polished digital home, helps bidders feel informed,
                     and gives administrators the practical tools they need to run the room with calm.
                 </p>
                 <div class="landing-actions" aria-label="Primary actions">

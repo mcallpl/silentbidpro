@@ -1,14 +1,14 @@
-# Silent Bid Buddy Product Blueprint
+# Silent Bid Pro Product Blueprint
 
 ## Product Direction
 
-Silent Bid Buddy is a reusable hybrid silent auction platform for nonprofits. It should feel warm, cheerful, donor-trustworthy, clean, and operational. The product should support in-person gala bidding through QR codes, online bidding before or during the event, and admin closeout workflows that help staff and volunteers finish the night calmly.
+Silent Bid Pro is a reusable hybrid silent auction platform for nonprofits. It should feel warm, cheerful, donor-trustworthy, clean, and operational. The product should support in-person gala bidding through QR codes, online bidding before or during the event, and admin closeout workflows that help staff and volunteers finish the night calmly.
 
-Givebutter is the primary benchmark for feature coverage and donor ease. Silent Bid Buddy should match the important auction loops, then improve on auction-night operations: faster QR bidding, clearer admin closeout, better printed materials, pickup tracking, and less operational clutter.
+Givebutter is the primary benchmark for feature coverage and donor ease. Silent Bid Pro should match the important auction loops, then improve on auction-night operations: faster QR bidding, clearer admin closeout, better printed materials, pickup tracking, and less operational clutter.
 
 ## Core Positioning
 
-Silent Bid Buddy helps nonprofits run a hybrid silent auction where bidders can scan, browse, bid, get reminders, pay, and pick up items without staff chasing them manually.
+Silent Bid Pro helps nonprofits run a hybrid silent auction where bidders can scan, browse, bid, get reminders, pay, and pick up items without staff chasing them manually.
 
 The product should eventually support many organizations and many auction events, but the first implementation should keep the current app moving by adding reusable event structure without forcing a complete rewrite.
 
@@ -149,7 +149,7 @@ This page is critical for hybrid events because guests should not need to rememb
 
 ## Payment Experience
 
-Silent Bid Buddy should support both payment modes:
+Silent Bid Pro should support both payment modes:
 
 ### Item-by-Item Checkout
 
@@ -296,14 +296,14 @@ Print direction:
 
 ## AI Item Enrichment
 
-Silent Bid Buddy should offer an assisted item creation flow for admins who receive rough donor submissions. The admin should be able to enter an item title, donor notes, value, restrictions, and optional reference photos, then generate:
+Silent Bid Pro should offer an assisted item creation flow for admins who receive rough donor submissions. The admin should be able to enter an item title, donor notes, value, restrictions, and optional reference photos, then generate:
 - A polished donor-facing title.
 - A rich auction description.
 - A concise catalog/PDF summary.
 - A professional image when no good photo is available.
 - Suggested category, starting bid, increment, and buy-now price.
 
-Generated images should avoid embedded text. Silent Bid Buddy should place wording, lot numbers, QR codes, and event branding in the app/PDF template where typography is reliable and editable.
+Generated images should avoid embedded text. Silent Bid Pro should place wording, lot numbers, QR codes, and event branding in the app/PDF template where typography is reliable and editable.
 
 Description improvement should happen before image generation. Better bidder copy creates a better creative brief for the generated image, and it also helps admins turn sparse donor notes into copy that makes the item feel more valuable, memorable, and easy to bid on.
 

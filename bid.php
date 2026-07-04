@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Bidder Authentication
+// SILENT BID PRO — Bidder Authentication
 // Phone verification flow for auction guests.
 // ============================================================
 
@@ -20,7 +20,7 @@ $page_title = APP_NAME . ' - Bidder Sign In';
 <head>
     <?php renderPageMeta([
         'title' => $page_title,
-        'description' => 'Sign in to Silent Bid Buddy and start bidding in a polished, secure nonprofit auction experience.'
+        'description' => 'Sign in to Silent Bid Pro and start bidding in a polished, secure nonprofit auction experience.'
     ]); ?>
 </head>
 <body class="auth-page" data-vapid-public-key="<?php echo htmlspecialchars(VAPID_PUBLIC_KEY); ?>">

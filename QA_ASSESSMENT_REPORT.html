@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silent Bid Buddy — Full Application Assessment</title>
+<title>Silent Bid Pro — Full Application Assessment</title>
 <style>
   :root{
     --surface-page:#0d0d0d;
@@ -266,7 +266,7 @@
 <header class="hero">
   <div class="hero-inner">
     <div class="eyebrow">Full Application Assessment</div>
-    <h1>Silent Bid Buddy — What Actually Works</h1>
+    <h1>Silent Bid Pro — What Actually Works</h1>
     <p class="subtitle">An independent, evidence-based audit of every major feature — auth, bidding, checkout,
     the admin dashboard, multi-tenant events, branding, and notifications — built by running the app locally
     against a live copy of the database, hitting every API endpoint directly, driving the UI in a real browser,
@@ -366,7 +366,7 @@
 
     <div class="status-card">
       <h3>Checkout / Stripe Payment <span class="badge partial">Hardened</span></h3>
-      <p><b>Security fixed:</b> webhook now fail-closed (no spoofing), payment requires a closed auction + real winner, success page checks ownership and shows true status, and failed/expired events resolve. Remaining: a live <code class="inline">silentbidbuddy</code> webhook secret must be added to the vault before go-live.</p>
+      <p><b>Security fixed:</b> webhook now fail-closed (no spoofing), payment requires a closed auction + real winner, success page checks ownership and shows true status, and failed/expired events resolve. Remaining: a live <code class="inline">silentbidpro</code> webhook secret must be added to the vault before go-live.</p>
     </div>
 
     <div class="status-card">
@@ -585,7 +585,7 @@ if (!$sms_sent) { ... }                 // non-empty array is truthy → never f
       <div class="finding" data-sev="medium">
         <div class="finding-head"><span class="sev medium">Medium</span><span class="finding-title">Legacy admin token silently rotates every day with no way to look it up</span></div>
         <div class="finding-loc">vault/secrets.php</div>
-        <pre>$vault_admin_token = 'sbbuddy_' . hash('sha256', 'silent-bid-buddy-admin-' . date('Y-m-d'));</pre>
+        <pre>$vault_admin_token = 'sbpro_' . hash('sha256', 'silent-bid-pro-admin-' . date('Y-m-d'));</pre>
         <p>The fallback single-token admin login is a SHA-256 hash seeded by <i>today's date</i> — it changes every 24 hours with no in-app way to view the current value.</p>
         <div class="decision-note"><b>Open — low priority / likely fine as-is.</b> This only affects the <i>legacy</i> token fallback; the primary admin login is the username/password system (<code class="inline">admin_accounts</code>), which is unaffected. The daily-rotating token is arguably a feature (auto-expiring). No action needed unless you actively use the legacy Bearer-token flow — in which case, replace it with a stored secret in the vault. Left as-is intentionally.</div>
       </div>
@@ -642,7 +642,7 @@ if (!$sms_sent) { ... }                 // non-empty array is truthy → never f
         <div class="finding-head"><span class="sev fixed">✓ Fixed</span><span class="finding-title">Missing Stripe secrets degrade dangerously, not safely</span></div>
         <div class="finding-loc">config.php · api/checkout/webhook.php</div>
         <p>Stripe keys silently default to <code class="inline">''</code>. The <i>dangerous</i> consequence was that an empty <code class="inline">STRIPE_WEBHOOK_SECRET</code> made the webhook accept unverified payloads.</p>
-        <div class="fix-note"><b>Addressed by the fail-closed webhook (see the critical webhook fix):</b> an empty/misconfigured secret now causes verification to fail and the request to be rejected (401), never accepted. Session creation already degrades gracefully with a user-facing error. Config intentionally does not hard-<code class="inline">die()</code> on missing Stripe keys (unlike ADMIN_TOKEN) so that non-payment features — bidding, the catalog — keep working when Stripe isn't configured; the failure is enforced at point-of-use instead. <b>Production note:</b> no <code class="inline">silentbidbuddy</code> key exists in the vault's webhook-secret map, so a webhook secret must be added there before real payments go live.</div>
+        <div class="fix-note"><b>Addressed by the fail-closed webhook (see the critical webhook fix):</b> an empty/misconfigured secret now causes verification to fail and the request to be rejected (401), never accepted. Session creation already degrades gracefully with a user-facing error. Config intentionally does not hard-<code class="inline">die()</code> on missing Stripe keys (unlike ADMIN_TOKEN) so that non-payment features — bidding, the catalog — keep working when Stripe isn't configured; the failure is enforced at point-of-use instead. <b>Production note:</b> no <code class="inline">silentbidpro</code> key exists in the vault's webhook-secret map, so a webhook secret must be added there before real payments go live.</div>
       </div>
 
       <div class="finding isfixed" data-sev="fixed">
@@ -879,7 +879,7 @@ if (!$sms_sent) { ... }                 // non-empty array is truthy → never f
 
 <footer>
   <div class="footer-inner">
-    Silent Bid Buddy — Full Application Assessment · Generated by live testing + static code review against the local
+    Silent Bid Pro — Full Application Assessment · Generated by live testing + static code review against the local
     development environment on 2026-07-01/02. Every citation above is a real file path in this repository as of that
     date; line numbers may drift as the code changes.
   </div>

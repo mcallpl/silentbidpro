@@ -1,6 +1,6 @@
 /* ============================================================
    ADMIN DASHBOARD STYLES — Brand-Aligned, Professional UI
-   Silent Bid Buddy Admin Interface
+   Silent Bid Pro Admin Interface
    ============================================================ */
 
 /* CSS Variables */
@@ -53,7 +53,7 @@ body {
     justify-content: center;
     min-height: 100vh;
     background: linear-gradient(90deg, rgba(9, 17, 33, 0.82), rgba(9, 17, 33, 0.36)),
-                url("../images/brand/silent-bid-buddy-social-1200x630.png") center / cover no-repeat;
+                url("../images/brand/silent-bid-pro-social-1200x630.png") center / cover no-repeat;
     padding: 2rem;
 }
 

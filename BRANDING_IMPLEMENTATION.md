@@ -2,7 +2,7 @@
 
 ## Overview
 
-Silent Bid Buddy now supports dynamic event branding with customizable colors, organization logos, and event details. The branding system is production-ready and integrated across all frontend pages.
+Silent Bid Pro now supports dynamic event branding with customizable colors, organization logos, and event details. The branding system is production-ready and integrated across all frontend pages.
 
 ## Architecture
 

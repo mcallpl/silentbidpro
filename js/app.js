@@ -1,5 +1,5 @@
 /**
- * SILENT BID BUDDY — Main Application JavaScript
+ * SILENT BID PRO — Main Application JavaScript
  * Authentication, session management, API communication
  */
 

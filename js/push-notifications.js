@@ -1,5 +1,5 @@
 /**
- * SILENT BID BUDDY — Push Notifications Handler
+ * SILENT BID PRO — Push Notifications Handler
  * Manages browser push notification subscriptions
  */
 

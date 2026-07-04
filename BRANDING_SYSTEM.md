@@ -2,7 +2,7 @@
 
 ## Overview
 
-Silent Bid Buddy now features a complete, event-driven CSS branding system that allows dynamic color customization per event without hardcoding colors in PHP or JavaScript. All colors are defined as CSS custom properties (variables) and can be updated per event through the admin panel.
+Silent Bid Pro now features a complete, event-driven CSS branding system that allows dynamic color customization per event without hardcoding colors in PHP or JavaScript. All colors are defined as CSS custom properties (variables) and can be updated per event through the admin panel.
 
 ## Architecture
 

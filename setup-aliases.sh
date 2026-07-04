@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# SETUP SHELL ALIASES FOR SILENTBIDBUDDY DEVELOPMENT
+# SETUP SHELL ALIASES FOR SILENTBIDPRO DEVELOPMENT
 # Run this once to add aliases to your shell
 # ============================================================
 
@@ -29,7 +29,7 @@ echo ""
 
 # Add aliases to shell config
 ALIASES="
-# ===== Silent Bid Buddy Aliases =====
+# ===== Silent Bid Pro Aliases =====
 alias sbbstart='cd $PROJECT_DIR && ./start-local.sh'
 alias sbbtest='cd $PROJECT_DIR && ./pre-deploy-test.sh'
 alias pushit='cd $PROJECT_DIR && ./push.sh'
@@ -38,7 +38,7 @@ alias sbbdocs='cat $PROJECT_DIR/DEVELOPMENT_WORKFLOW.md'
 "
 
 # Check if aliases already exist
-if grep -q "Silent Bid Buddy Aliases" "$RC_FILE"; then
+if grep -q "Silent Bid Pro Aliases" "$RC_FILE"; then
     echo "⚠️  Aliases already exist in $RC_FILE"
 else
     echo "$ALIASES" >> "$RC_FILE"

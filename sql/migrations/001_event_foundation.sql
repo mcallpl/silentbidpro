@@ -1,10 +1,10 @@
 -- ============================================================
--- Silent Bid Buddy Migration 001: Event Foundation
+-- Silent Bid Pro Migration 001: Event Foundation
 -- Adds reusable organization/event structure, optional user email,
 -- categories, and item-level close-time overrides.
 -- ============================================================
 
-USE silentbidbuddy;
+USE silentbidpro;
 
 DELIMITER //
 
@@ -105,9 +105,9 @@ CALL sbb_add_column_if_missing(
 );
 
 INSERT INTO organizations (name, slug, brand_primary, brand_accent)
-SELECT 'Silent Bid Buddy', 'silent-bid-buddy', '#2f6f5e', '#f2b84b'
+SELECT 'Silent Bid Pro', 'silent-bid-pro', '#2f6f5e', '#f2b84b'
 WHERE NOT EXISTS (
-    SELECT 1 FROM organizations WHERE slug = 'silent-bid-buddy'
+    SELECT 1 FROM organizations WHERE slug = 'silent-bid-pro'
 );
 
 INSERT INTO events (
@@ -131,7 +131,7 @@ SELECT
     'open'
 FROM organizations o
 LEFT JOIN items i ON 1 = 1
-WHERE o.slug = 'silent-bid-buddy'
+WHERE o.slug = 'silent-bid-pro'
   AND NOT EXISTS (
       SELECT 1 FROM events e
       WHERE e.organization_id = o.id
@@ -140,7 +140,7 @@ WHERE o.slug = 'silent-bid-buddy'
 GROUP BY o.id;
 
 UPDATE items i
-JOIN organizations o ON o.slug = 'silent-bid-buddy'
+JOIN organizations o ON o.slug = 'silent-bid-pro'
 JOIN events e ON e.organization_id = o.id AND e.slug = 'default-auction'
 SET i.event_id = e.id
 WHERE i.event_id IS NULL;
