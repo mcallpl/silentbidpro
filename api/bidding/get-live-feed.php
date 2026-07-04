@@ -30,8 +30,9 @@ if (!$item_id) {
     die(json_encode(['status' => 'error', 'message' => 'Item ID required']));
 }
 
-// Validate limit
-$limit = min($limit, 100);
+// Validate limit (clamp both ends — a negative limit becomes "LIMIT -1", which
+// errors and silently returns an empty feed flashing "No bids yet").
+$limit = max(1, min($limit, 100));
 
 // Get recent bids
 $bids = getRecentBids($item_id, $limit);

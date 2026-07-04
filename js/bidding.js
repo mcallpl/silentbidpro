@@ -73,10 +73,21 @@ SBB.Bidding = {
         const countdownTimer = document.getElementById('countdownTimer');
         if (!countdownTimer) return;
 
+        // Count down from the SERVER-provided remaining milliseconds using the
+        // local monotonic clock, instead of parsing a MySQL datetime string with
+        // new Date() — that returns Invalid Date on Safari/iOS (a "NaNs" timer)
+        // and is otherwise parsed in the viewer's timezone (hours off). Falls back
+        // to the epoch value if the remaining ms wasn't provided.
+        const startedAt = Date.now();
+        let baseRemaining = (typeof window.SBB.timeRemainingMs === 'number')
+            ? window.SBB.timeRemainingMs
+            : (typeof window.SBB.auctionEndEpochMs === 'number'
+                ? Math.max(0, window.SBB.auctionEndEpochMs - Date.now())
+                : 0);
+
         this.countdownInterval = setInterval(() => {
-            const now = new Date().getTime();
-            const endTime = new Date(window.SBB.auctionEndTime).getTime();
-            const distance = Math.max(0, endTime - now);
+            const elapsed = Date.now() - startedAt;
+            const distance = Math.max(0, baseRemaining - elapsed);
 
             if (distance === 0) {
                 clearInterval(this.countdownInterval);
@@ -128,6 +139,7 @@ SBB.Bidding = {
             if (response && response.status === 'ok' && Array.isArray(response.bids)) {
                 this.renderBidFeed(response.bids);
                 this.applyBidStateFromFeed(response);
+                this.syncItemStateFromFeed(response);
             } else {
                 console.warn('[BID SYNC] Invalid response:', response);
                 // Don't clear the feed on error - keep showing last known bids
@@ -175,6 +187,33 @@ SBB.Bidding = {
             state = response.viewer_is_winning ? 'winning' : 'outbid';
         }
         this.applyBidState(state);
+    },
+
+    // Keep the displayed high bid, quick-bid amount, and open/closed state in step
+    // with the live feed. Without this, being outbid by another bidder left the big
+    // price and Quick Bid button showing the old amount — so Quick Bid submitted a
+    // stale (too-low) bid the server then rejected — and a Buy It Now by someone
+    // else left this bidder's UI fully open.
+    syncItemStateFromFeed(response) {
+        const high = parseFloat(response.current_high_bid);
+        if (!isNaN(high) && high > 0 && high !== window.SBB.currentHighBid) {
+            window.SBB.currentHighBid = high;
+            window.SBB.hasBids = true;
+            const nextMin = high + window.SBB.minIncrement;
+            const currentBidAmount = document.querySelector('.current-bid-amount');
+            if (currentBidAmount) currentBidAmount.textContent = SBB.Utils.formatCurrency(high);
+            const qb = document.querySelector('.quick-bid-amount');
+            if (qb) qb.textContent = SBB.Utils.formatCurrency(nextMin);
+            const nm = document.querySelector('.next-minimum-bid');
+            if (nm) nm.textContent = 'Next minimum: ' + SBB.Utils.formatCurrency(nextMin);
+        }
+        if (response.is_closed) {
+            if (this.countdownInterval) clearInterval(this.countdownInterval);
+            const timer = document.getElementById('countdownTimer');
+            if (timer) { timer.textContent = 'Auction Closed'; timer.classList.add('time-expired'); }
+            this.disableBidding();
+            window.SBB.isAuctionOpen = false;
+        }
     },
 
     applyBidState(state) {

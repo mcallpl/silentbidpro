@@ -12,7 +12,15 @@ require_once __DIR__ . '/../../includes/session-manager.php';
 
 header('Content-Type: application/json');
 
-requireAdminAuth();
+// User records are GLOBAL (a bidder's phone identity spans every event), so
+// listing/reading/editing/deleting them is a super-admin function. Without this,
+// any single-event admin could read every bidder's PII and delete any account.
+$admin = requireAdminAuth();
+if (empty($admin['is_super_admin'])) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Super admin privileges required']);
+    exit;
+}
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 

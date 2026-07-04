@@ -34,7 +34,7 @@ if (!$event) {
 
 // Get event_id from session metadata (for event-specific Stripe verification)
 $event_id = 0;
-if ($event['type'] === 'checkout.session.completed') {
+if (($event['type'] ?? '') === 'checkout.session.completed') {
     $session = $event['data']['object'] ?? [];
     $event_id = (int)($session['metadata']['event_id'] ?? 0);
 }
@@ -71,8 +71,12 @@ switch ($event_type) {
         // charge.failed carries payment_intent; payment_intent.* IS the intent (id).
         $pi = $obj['payment_intent'] ?? ($event_type === 'payment_intent.payment_failed' ? ($obj['id'] ?? '') : '');
         if (!empty($pi)) {
+            // Never overwrite a genuinely-paid transaction. Stripe can deliver a
+            // charge.failed (first card declined) AFTER the checkout.session.completed
+            // for a successful retry in the same session; without this guard that
+            // late failure would flip a paid row to "failed".
             dbUpdate(
-                "UPDATE transactions SET status = ? WHERE stripe_payment_intent_id = ?",
+                "UPDATE transactions SET status = ? WHERE stripe_payment_intent_id = ? AND status != 'paid'",
                 ['failed', $pi]
             );
         }

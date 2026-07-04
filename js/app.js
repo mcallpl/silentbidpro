@@ -199,15 +199,11 @@ SBB.Auth = {
                 // Show success
                 this.showSuccessMessage();
 
-                // Redirect after 2 seconds to return URL or default item
+                // Redirect after 2 seconds to return URL or default item.
                 setTimeout(() => {
                     const params = new URLSearchParams(window.location.search);
                     const returnUrl = params.get('return');
-                    if (returnUrl) {
-                        window.location.href = decodeURIComponent(returnUrl);
-                    } else {
-                        window.location.href = 'items.php';
-                    }
+                    window.location.href = SBB.Utils.safeInternalPath(returnUrl, 'items.php');
                 }, 2000);
             } else {
                 error.textContent = response.message || 'Invalid code';
@@ -355,6 +351,25 @@ SBB.Utils = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    // Sanitize a caller-supplied redirect target so it can only ever point back
+    // into THIS site. Blocks open-redirects and javascript:/data: URLs (e.g.
+    // bid.php?return=https://evil.com or return=javascript:alert(1)). Accepts
+    // only a same-path relative URL; anything else falls back to `fallback`.
+    safeInternalPath(raw, fallback) {
+        fallback = fallback || 'items.php';
+        if (!raw) return fallback;
+        let decoded;
+        try { decoded = decodeURIComponent(raw); } catch (e) { return fallback; }
+        decoded = decoded.trim();
+        // Reject absolute URLs, protocol-relative URLs, scheme (javascript:, data:,
+        // http:), backslashes, and control chars.
+        if (/^[a-z][a-z0-9+.-]*:/i.test(decoded)) return fallback; // has a scheme
+        if (/^\/\//.test(decoded)) return fallback;                // //evil.com
+        if (/[\\\x00-\x1f]/.test(decoded)) return fallback;
+        if (decoded.charAt(0) === '/') return fallback;            // keep it relative
+        return decoded;
     }
 };
 

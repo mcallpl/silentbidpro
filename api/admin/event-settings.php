@@ -15,6 +15,22 @@ header('Cache-Control: no-cache, no-store, must-revalidate');
 $method = $_SERVER['REQUEST_METHOD'];
 $admin = requireAdminAuth();
 
+/**
+ * Never emit a live Stripe secret key in an API response. Replace it with a
+ * masked hint + a boolean so the UI can show "key is set" without disclosing it.
+ */
+function maskEventSettingsSecret($settings) {
+    if (!is_array($settings)) {
+        return $settings;
+    }
+    $secret = $settings['stripe_key_secret'] ?? null;
+    $settings['stripe_key_secret_set'] = !empty($secret);
+    if (!empty($secret)) {
+        $settings['stripe_key_secret'] = '••••••••' . substr($secret, -4);
+    }
+    return $settings;
+}
+
 // Get event_id from query string or request body
 $event_id = (int)($_GET['event_id'] ?? json_decode(file_get_contents('php://input'), true)['event_id'] ?? 0);
 
@@ -71,7 +87,7 @@ if ($method === 'GET') {
     echo json_encode([
         'status' => 'ok',
         'event' => $event,
-        'settings' => $settings
+        'settings' => maskEventSettingsSecret($settings)
     ]);
     exit;
 }
@@ -106,6 +122,12 @@ if ($method === 'POST' || $method === 'PUT') {
     $stripe_account_id = $data['stripe_account_id'] ?? null;
     $stripe_key_publishable = $data['stripe_key_publishable'] ?? null;
     $stripe_key_secret = $data['stripe_key_secret'] ?? null;
+
+    // If the UI echoed back the masked secret (•••• + last4) unchanged, treat it
+    // as "not provided" so we never overwrite the real key with the placeholder.
+    if (is_string($stripe_key_secret) && strpos($stripe_key_secret, '••') !== false) {
+        $stripe_key_secret = null;
+    }
 
     // Super admin only: SMS toggle
     if ($sms_enabled !== null && !$admin['is_super_admin']) {
@@ -190,7 +212,7 @@ if ($method === 'POST' || $method === 'PUT') {
     echo json_encode([
         'status' => 'ok',
         'message' => 'Event settings saved',
-        'settings' => $settings
+        'settings' => maskEventSettingsSecret($settings)
     ]);
     exit;
 }

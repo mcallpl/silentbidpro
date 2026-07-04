@@ -165,8 +165,11 @@ function dbUpdate($sql, $params = []) {
     }
     $stmt->close();
 
-    // Return true on successful execution (statement executed without error)
-    return true;
+    // Return the matched-row count (connection uses CLIENT_FOUND_ROWS, so a no-op
+    // update of identical data still returns >= 1). Callers can use this for
+    // compare-and-swap guards; existing truthy checks keep working. Error paths
+    // above return false, so distinguish failure with `=== false` when 0 is valid.
+    return (int)$affectedRows;
 }
 
 /**

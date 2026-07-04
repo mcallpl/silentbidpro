@@ -29,6 +29,12 @@
 //   php scripts/clone-event.php --source=test-event --name="Test Run"
 // ============================================================
 
+// SECURITY: mutating setup script — CLI only, never reachable over the web.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('Forbidden');
+}
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/db-helpers.php';
 

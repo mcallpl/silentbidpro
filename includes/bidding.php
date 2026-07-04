@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/db-helpers.php';
+require_once __DIR__ . '/events.php'; // getEffectiveItemCloseTime()
 
 /**
  * Get current item state with bid information
@@ -17,7 +18,7 @@ function getItemState($item_id) {
         "SELECT id, item_number, title, description, image_url,
                 fair_market_value, starting_bid, min_increment, buy_now_price,
                 current_high_bid, current_high_bidder_id, auction_end_time,
-                is_closed
+                close_time_override, is_closed
          FROM items WHERE id = ?",
         [(int)$item_id]
     );
@@ -110,9 +111,11 @@ function validateBidAmount($bid_amount, $current_high_bid, $min_increment, $star
         return ['valid' => true, 'message' => ''];
     }
 
-    // Check if bid meets next minimum
-    $next_minimum = calculateNextBid($current_high_bid, $min_increment);
-    if ($bid_amount < $next_minimum) {
+    // Check if bid meets next minimum. Compare in integer cents so binary
+    // float error (e.g. 10.30 + 0.05 = 10.350000000000001) can't reject a bid
+    // of exactly the advertised minimum.
+    $next_minimum = round(calculateNextBid($current_high_bid, $min_increment), 2);
+    if (round($bid_amount * 100) < round($next_minimum * 100)) {
         return [
             'valid' => false,
             'message' => 'Bid must be at least $' . number_format($next_minimum, 2)
@@ -137,6 +140,7 @@ function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = 
     // (always null), which fatally crashed every bid.
     $mysqli = getDB();
 
+    $in_transaction = false;
     try {
         // Start a transaction; the SELECT ... FOR UPDATE below takes the row lock
         // that actually prevents concurrent bids from racing. (The previous code
@@ -144,6 +148,7 @@ function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = 
         // constant — READ COMMITTED is an isolation level, not a start flag — and
         // fatally errored.)
         $mysqli->begin_transaction();
+        $in_transaction = true;
 
         // Lock the item row for update - this prevents other transactions from modifying it
         $lockStmt = $mysqli->prepare("SELECT current_high_bid, current_high_bidder_id, auction_end_time, is_closed FROM items WHERE id = ? FOR UPDATE");
@@ -174,12 +179,16 @@ function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = 
         } else {
             $mysqli->rollback();
         }
+        $in_transaction = false;
 
         return $result;
 
-    } catch (Exception $e) {
-        if ($mysqli->inTransaction()) {
-            $mysqli->rollback();
+    } catch (\Throwable $e) {
+        // mysqli has no inTransaction() method (that's PDO); calling it here would
+        // throw a second fatal inside the catch and mask the real error. Track the
+        // state ourselves and roll back unconditionally when a tx is open.
+        if ($in_transaction) {
+            try { $mysqli->rollback(); } catch (\Throwable $ignored) {}
         }
         error_log('[BID] Transaction error: ' . $e->getMessage());
         throw $e;
@@ -206,43 +215,28 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
         return ['status' => 'error', 'message' => 'Auction for this item is closed'];
     }
 
-    // Check if auction has ended
-    if (strtotime($item['auction_end_time']) < time()) {
+    // Check if auction has ended. Use the EFFECTIVE close time (close_time_override
+    // when set) so the bid gate matches what the listings and countdown show.
+    $effective_close = getEffectiveItemCloseTime($item);
+    if ($effective_close && strtotime($effective_close) < time()) {
         return ['status' => 'error', 'message' => 'Auction time has expired'];
     }
 
-    // You can't outbid yourself — if you're already the highest bidder there's
-    // nothing to raise. This is what allowed the same amount to be submitted
-    // repeatedly on an item you were already winning.
-    if ((int)($item['current_high_bidder_id'] ?? 0) === (int)$user_id) {
-        return ['status' => 'error', 'message' => "You're already the highest bidder on this item."];
-    }
-
-    // Validate bid amount
-    $validation = validateBidAmount(
-        $bid_amount,
-        (float)$item['current_high_bid'],
-        (float)$item['min_increment'],
-        (float)$item['starting_bid']
-    );
-
-    if (!$validation['valid']) {
-        return ['status' => 'error', 'message' => $validation['message']];
-    }
-
+    // Normalize money up front so every branch below compares clean 2-dp values.
     $bid_amount = normalizeBidMoney($bid_amount);
     $max_bid_amount = $max_bid_amount !== null ? normalizeBidMoney($max_bid_amount) : null;
-    $user_ceiling = $max_bid_amount !== null ? $max_bid_amount : $bid_amount;
-
-    // Validate max_bid if provided
     if ($max_bid_amount !== null && $max_bid_amount < $bid_amount) {
         return ['status' => 'error', 'message' => 'Max bid must be >= current bid'];
     }
+    $user_ceiling = $max_bid_amount !== null ? $max_bid_amount : $bid_amount;
+    $is_incumbent = (int)($item['current_high_bidder_id'] ?? 0) === (int)$user_id;
 
     // --- Buy It Now ---
-    // If the item has a buy-now price and the bid meets or exceeds it, this is an
-    // instant purchase: the bidder wins immediately at the buy-now price and the
-    // auction closes. (Runs inside the same locked transaction as a normal bid.)
+    // Evaluated BEFORE increment validation and the self-bid guard, so hitting the
+    // buy-now price always wins — even from the current leader, and even when the
+    // next increment would exceed buy-now (which used to reject it). The winner's
+    // payment request + checkout link are created by the caller AFTER commit via
+    // the 'buy_now' flag, so we never hold the row lock during Twilio/push calls.
     $buy_now_price = isset($item['buy_now_price']) ? (float)$item['buy_now_price'] : 0.0;
     if ($buy_now_price > 0 && $bid_amount >= $buy_now_price) {
         $win_amount = normalizeBidMoney($buy_now_price);
@@ -257,11 +251,14 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
             return ['status' => 'error', 'message' => 'Failed to place bid'];
         }
 
-        // Win + close immediately.
-        dbUpdate(
+        // Win + close immediately (fail the bid if the state update didn't land,
+        // so the transaction rolls back rather than reporting a phantom purchase).
+        if (!dbUpdate(
             "UPDATE items SET current_high_bid = ?, current_high_bidder_id = ?, is_closed = 1 WHERE id = ?",
             [$win_amount, (int)$user_id, (int)$item_id]
-        );
+        )) {
+            return ['status' => 'error', 'message' => 'Failed to finalize purchase'];
+        }
 
         dbInsert(
             "INSERT INTO audit_log (event_type, user_id, item_id, description, created_at)
@@ -287,6 +284,30 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
             // Notify a prior high bidder (if any, and not the buyer) that they lost.
             'previous_high_bidder_id' => ($prior_bidder && $prior_bidder !== (int)$user_id) ? $prior_bidder : null
         ];
+    }
+
+    // Self-bid guard: block only a true no-op. The current leader may still RAISE
+    // their proxy max (handled by the proxy branch below); reject only when they
+    // aren't actually increasing it. (Buy It Now was already handled above.)
+    if ($is_incumbent) {
+        $current_ceiling = getHighBidderCeiling($item_id, (int)$user_id, (float)$item['current_high_bid']);
+        if ($max_bid_amount === null || round($user_ceiling * 100) <= round($current_ceiling * 100)) {
+            return ['status' => 'error', 'message' => "You're already the highest bidder on this item."];
+        }
+    }
+
+    // Validate bid amount (skip for the incumbent raising their max — they already
+    // lead, so the "beat the current price" rule doesn't apply to a max increase).
+    if (!$is_incumbent) {
+        $validation = validateBidAmount(
+            $bid_amount,
+            (float)$item['current_high_bid'],
+            (float)$item['min_increment'],
+            (float)$item['starting_bid']
+        );
+        if (!$validation['valid']) {
+            return ['status' => 'error', 'message' => $validation['message']];
+        }
     }
 
     $previous_high_bidder_id = $item['current_high_bidder_id'];
@@ -330,6 +351,13 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
         }
     }
 
+    // Never let proxy escalation push the visible price to or past the buy-now
+    // price — otherwise the standing price could exceed buy-now and a later
+    // buy-now purchase would undercut the current leader.
+    if ($buy_now_price > 0 && $new_high_bid > $buy_now_price) {
+        $new_high_bid = normalizeBidMoney($buy_now_price);
+    }
+
     // Insert the visible bid record for the bidder.
     $visible_user_bid = $is_user_winning_after_bid ? $new_high_bid : $user_ceiling;
     $bid_id = dbInsert(
@@ -356,8 +384,10 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
         );
     }
 
-    // Update item with new high bid
-    $time_remaining = strtotime($item['auction_end_time']) - time();
+    // Update item with new high bid. Anti-sniping is measured against the
+    // EFFECTIVE close time so it matches the bid gate and the displayed countdown.
+    $close_basis = $effective_close ?: $item['auction_end_time'];
+    $time_remaining = strtotime($close_basis) - time();
     $should_extend = $time_remaining > 0 && $time_remaining <= (ANTI_SNIPING_MINUTES * 60);
     $new_end_time = null;
 
@@ -365,11 +395,15 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
         // Extend auction by ANTI_SNIPING_MINUTES
         $new_end_time = date(
             'Y-m-d H:i:s',
-            strtotime($item['auction_end_time']) + (ANTI_SNIPING_MINUTES * 60)
+            strtotime($close_basis) + (ANTI_SNIPING_MINUTES * 60)
         );
     }
 
-    updateItemBidState($item_id, $new_high_bid, $new_high_bidder_id, $new_end_time);
+    // A failed state update must fail the whole bid so the caller rolls back,
+    // rather than committing the bid row while items.current_high_bid stays stale.
+    if (!updateItemBidState($item_id, $new_high_bid, $new_high_bidder_id, $new_end_time)) {
+        return ['status' => 'error', 'message' => 'Failed to update auction state'];
+    }
 
     // Log audit event
     dbInsert(

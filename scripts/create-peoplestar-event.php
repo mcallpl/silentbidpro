@@ -16,6 +16,12 @@
 // If no source slug is given it auto-detects the Ryan's Reach event.
 // ============================================================
 
+// SECURITY: mutating setup script — CLI only, never reachable over the web.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('Forbidden');
+}
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/db-helpers.php';
 

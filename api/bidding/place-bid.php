@@ -84,6 +84,26 @@ if ($result['status'] !== 'success') {
 
 error_log('[BID] ✓ SUCCESS - Bid ' . $result['bid_id'] . ' placed for $' . $bid_amount);
 
+// Buy It Now: the purchase is committed, but a buy-now win closes the item
+// WITHOUT going through the auction closer, so its winner payment request +
+// checkout link must be created here (after commit, off the row lock). Without
+// this, a buy-now buyer got no transaction record and was never sent a way to pay.
+if (!empty($result['buy_now'])) {
+    try {
+        require_once __DIR__ . '/../../includes/auction-engine.php';
+        $bn_item = getItemState($item_id);
+        processWinner(
+            (int)$item_id,
+            (int)$user['id'],
+            (float)$result['new_high_bid'],
+            $bn_item['title'] ?? 'Item',
+            $user['phone_number'] ?? ''
+        );
+    } catch (\Throwable $e) {
+        error_log('[BID] Buy-now winner processing failed (purchase still stands): ' . $e->getMessage());
+    }
+}
+
 // Send notifications to previous bidder if applicable.
 // The bid is ALREADY committed at this point, so a notification failure must
 // never turn a successful bid into an error response. Isolate it defensively.

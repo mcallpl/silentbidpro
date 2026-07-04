@@ -19,15 +19,41 @@ function closeExpiredAuctions() {
     $errors = [];
     $closed_count = 0;
 
-    // Get all expired items that haven't been closed yet
+    // Serialize the whole closer with a MySQL advisory lock so overlapping cron
+    // ticks (a slow run that exceeds 60s) or a concurrent admin "Close Auctions"
+    // click can't both process the same winners → duplicate payment requests and
+    // duplicate "You won!" SMS/push. Non-blocking: if another run holds it, bail.
+    $got_lock = (int)dbGetValue("SELECT GET_LOCK('sbp_auction_close', 0)");
+    if ($got_lock !== 1) {
+        return ['closed_count' => 0, 'errors' => ['Another auction-close run is in progress; skipped.']];
+    }
+
+    try {
+
+    // Get all expired items that haven't been closed yet. Use the EFFECTIVE close
+    // time (close_time_override when set) so items with a custom close are handled.
     $expired_items = dbGetAll(
         "SELECT id, item_number, title, current_high_bid, current_high_bidder_id
          FROM items
-         WHERE auction_end_time <= NOW() AND is_closed = 0"
+         WHERE COALESCE(close_time_override, auction_end_time) <= NOW() AND is_closed = 0"
     );
 
     foreach ($expired_items as $item) {
         try {
+            // Re-read fresh state under the lock. A bid may have landed at the close
+            // second and triggered an anti-sniping extension (or a Buy It Now closed
+            // it) between the SELECT above and now — in which case skip it.
+            $fresh = dbGetRow(
+                "SELECT id, title, current_high_bid, current_high_bidder_id, is_closed
+                 FROM items
+                 WHERE id = ? AND is_closed = 0
+                   AND COALESCE(close_time_override, auction_end_time) <= NOW()",
+                [(int)$item['id']]
+            );
+            if (!$fresh) {
+                continue; // extended, already closed, or claimed elsewhere
+            }
+            $item = $fresh;
             // Process the winner BEFORE marking the item closed. Previously the
             // item was closed first and processWinner()'s result was discarded,
             // so a failed transaction/notification silently left the winner with
@@ -63,8 +89,18 @@ function closeExpiredAuctions() {
                 }
             }
 
-            // Mark as closed (no winner, or winner processed successfully / unrecoverable)
-            dbUpdate("UPDATE items SET is_closed = 1 WHERE id = ?", [(int)$item['id']]);
+            // Mark as closed — compare-and-swap: only if still open and still past
+            // its effective close. If it was extended/closed in the race window
+            // this affects 0 rows and we don't double-count it.
+            $affected = dbUpdate(
+                "UPDATE items SET is_closed = 1
+                 WHERE id = ? AND is_closed = 0
+                   AND COALESCE(close_time_override, auction_end_time) <= NOW()",
+                [(int)$item['id']]
+            );
+            if ($affected < 1) {
+                continue;
+            }
             $closed_count++;
 
             // Log audit event
@@ -83,6 +119,10 @@ function closeExpiredAuctions() {
         'closed_count' => $closed_count,
         'errors' => $errors
     ];
+
+    } finally {
+        dbGetValue("SELECT RELEASE_LOCK('sbp_auction_close')");
+    }
 }
 
 /**

@@ -5,6 +5,14 @@
 // Usage: php regenerate-qr-codes.php
 // ============================================================
 
+// SECURITY: CLI only. Over the web this would rewrite every item's QR/short URL
+// using the attacker-controllable Host header (pointing all printed QR codes at
+// an attacker) and burn Rebrandly quota. It's documented as `php regenerate-qr-codes.php`.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('Forbidden');
+}
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db-helpers.php';
 require_once __DIR__ . '/includes/rebrandly-utils.php';

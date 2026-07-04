@@ -6,6 +6,12 @@
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db-helpers.php';
+require_once __DIR__ . '/includes/auth.php';
+
+// SECURITY: this page dumps bidder PII (names, phone numbers), full bid history,
+// and the sessions table. It must never be reachable anonymously. requireAdminAuth()
+// returns the admin identity or dies with a 401 before anything is rendered.
+requireAdminAuth();
 
 header('Content-Type: text/html; charset=UTF-8');
 ?>

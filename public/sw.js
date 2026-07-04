@@ -3,8 +3,8 @@
 // Handles incoming push messages and displays notifications
 // ============================================================
 
-const NOTIFICATION_ICON = '/images/sbb-icon-192.png';
-const NOTIFICATION_BADGE = '/images/sbb-badge-72.png';
+const NOTIFICATION_ICON = '/images/brand/icon-192.png';
+const NOTIFICATION_BADGE = '/images/brand/icon-192.png';
 
 // Handle incoming push messages
 self.addEventListener('push', (event) => {
@@ -34,8 +34,7 @@ self.addEventListener('push', (event) => {
                 }
             ],
             requireInteraction: false,
-            vibrate: [200, 100, 200],
-            sound: '/sounds/notification.mp3'
+            vibrate: [200, 100, 200]
         };
 
         event.waitUntil(
@@ -61,13 +60,19 @@ self.addEventListener('notificationclick', (event) => {
     console.log('[SW] Notification clicked:', event.notification.tag);
     event.notification.close();
 
-    const { action, data } = event;
-    let urlToOpen = '/items.php';
+    // A "Close" action just dismisses — don't open a window.
+    if (event.action === 'close') {
+        return;
+    }
 
-    // Route based on notification data
-    if (data && data.item_id) {
+    // Push payload data lives on event.notification.data, NOT on the event itself.
+    // Reading event.data made this always undefined, so every click fell back to
+    // /items.php instead of the outbid item.
+    const data = event.notification.data || {};
+    let urlToOpen = '/items.php';
+    if (data.item_id) {
         urlToOpen = `/item.php?id=${data.item_id}`;
-    } else if (data && data.url) {
+    } else if (data.url) {
         urlToOpen = data.url;
     }
 
@@ -76,13 +81,16 @@ self.addEventListener('notificationclick', (event) => {
             type: 'window',
             includeUncontrolled: true
         }).then((clientList) => {
-            // Check if app is already open in a window
-            for (let client of clientList) {
-                if (client.url === urlToOpen || client.url.includes('silentbidpro')) {
+            // Reuse an existing tab, but NAVIGATE it to the target first — the old
+            // code just focused any tab containing "silentbidpro" without moving it.
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    if ('navigate' in client) {
+                        return client.navigate(urlToOpen).then((c) => (c || client).focus());
+                    }
                     return client.focus();
                 }
             }
-            // App not open, open new window
             if (clients.openWindow) {
                 return clients.openWindow(urlToOpen);
             }

@@ -127,7 +127,7 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             'line_items[0][price_data][currency]' => 'usd',
             'line_items[0][price_data][product_data][name]' => $item_title,
             'line_items[0][price_data][product_data][description]' => $line_description,
-            'line_items[0][price_data][unit_amount]' => (int)($charge_amount * 100),
+            'line_items[0][price_data][unit_amount]' => (int)round($charge_amount * 100),
             'line_items[0][quantity]' => '1',
             'mode' => 'payment',
             'success_url' => APP_DOMAIN . '/success.php?session_id={CHECKOUT_SESSION_ID}',
@@ -332,32 +332,25 @@ function processCheckoutCompleted($session) {
 }
 
 /**
- * Verify Stripe webhook signature (tries event-specific secrets first, then global)
+ * Verify Stripe webhook signature against the endpoint's signing secret.
+ *
+ * SECURITY: verification is done ONLY against the dedicated webhook signing
+ * secret (a `whsec_...` value in STRIPE_WEBHOOK_SECRET). The previous version
+ * tried an event's stored Stripe API *secret key* (`sk_...`) as an HMAC secret,
+ * choosing which one by the `event_id` in the UNVERIFIED payload — so any event
+ * organizer who knew their own API key could forge a `checkout.session.completed`
+ * for any item and mark it paid without paying. An API key is not a webhook
+ * secret; that whole path is removed. Per-event webhook endpoints, if ever
+ * added, must store their own `whsec_` secret in a dedicated column.
+ *
  * @param string $payload Raw request body
  * @param string $signature Signature header
- * @param int $event_id Event ID (optional, for event-specific verification)
+ * @param int $event_id Unused; kept for call-site compatibility
  * @return bool
  */
 function verifyStripeSignature($payload, $signature, $event_id = 0) {
-    // Try event-specific webhook secret first
-    if ($event_id) {
-        $event_settings = dbGetRow(
-            "SELECT stripe_key_secret FROM event_settings WHERE event_id = ?",
-            [(int)$event_id]
-        );
-
-        if ($event_settings && !empty($event_settings['stripe_key_secret'])) {
-            // Extract webhook secret from the stripe_key_secret if it contains both
-            // For now, assume stripe_key_secret is just the secret key
-            // In production, you'd want a separate webhook secret field
-            if (verifyStripeSignatureHeader($payload, $signature, $event_settings['stripe_key_secret'])) {
-                return true;
-            }
-        }
-    }
-
-    // Fall back to global webhook secret
     if (!STRIPE_WEBHOOK_SECRET) {
+        error_log('[STRIPE] Webhook rejected: STRIPE_WEBHOOK_SECRET is not configured (fail-closed).');
         return false;
     }
 

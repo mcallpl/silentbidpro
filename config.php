@@ -81,13 +81,17 @@ if (!defined('VAPID_SUBJECT')) define('VAPID_SUBJECT', 'mailto:' . ($vault_conta
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', __DIR__ . '/uploads/');
 if (!defined('QR_CODES_DIR')) define('QR_CODES_DIR', __DIR__ . '/qr_codes/');
 
+if (!defined('PUBLIC_SITE_URL')) define('PUBLIC_SITE_URL', getenv('PUBLIC_SITE_URL') ?: 'https://silentbidpro.peoplestar.com');
 if (!defined('APP_DOMAIN')) {
     // Auto-detect domain from current request or environment variable
     if (!empty($_SERVER['HTTP_HOST'])) {
         $protocol = !empty($_SERVER['HTTPS']) ? 'https' : 'http';
         define('APP_DOMAIN', $protocol . '://' . $_SERVER['HTTP_HOST']);
     } else {
-        define('APP_DOMAIN', getenv('APP_DOMAIN') ?: 'http://localhost:8000');
+        // CLI/cron: no HTTP_HOST. Fall back to the public site URL, NOT localhost —
+        // otherwise cron-generated checkout links in winner SMS point to
+        // http://localhost:8000 and are dead for recipients.
+        define('APP_DOMAIN', getenv('APP_DOMAIN') ?: PUBLIC_SITE_URL);
     }
 }
 if (!defined('APP_NAME')) define('APP_NAME', 'Silent Bid Pro');
@@ -96,34 +100,18 @@ if (!defined('APP_NAME')) define('APP_NAME', 'Silent Bid Pro');
 // default so production logs don't leak sensitive data; enable via the
 // SBB_DEBUG_LOG environment variable when diagnosing an issue.
 if (!defined('DEBUG_LOG')) define('DEBUG_LOG', getenv('SBB_DEBUG_LOG') === '1');
-if (!defined('PUBLIC_SITE_URL')) define('PUBLIC_SITE_URL', getenv('PUBLIC_SITE_URL') ?: 'https://silentbidpro.com');
 
 // ============================================================
 // COOKIE CONFIGURATION (for session persistence)
 // ============================================================
 if (!defined('COOKIE_DOMAIN')) {
-    $cookie_domain = '';
-    // Auto-detect domain for cookie persistence
-    if (!empty($_SERVER['HTTP_HOST'])) {
-        $host = $_SERVER['HTTP_HOST'];
-        // Remove port if present
-        $host = preg_replace('/:.*$/', '', $host);
-        // For real domains (not localhost/IP), extract parent domain
-        if ($host !== 'localhost' && $host !== '127.0.0.1' && !filter_var($host, FILTER_VALIDATE_IP)) {
-            // Count dots - if more than 1, this is a subdomain, extract parent domain
-            $dot_count = substr_count($host, '.');
-            if ($dot_count > 1) {
-                // Extract parent domain (remove first subdomain)
-                $parts = explode('.', $host);
-                array_shift($parts);
-                $cookie_domain = '.' . implode('.', $parts);
-            } else {
-                // Single domain with one dot (e.g., example.com)
-                $cookie_domain = '.' . $host;
-            }
-        }
-    }
-    define('COOKIE_DOMAIN', $cookie_domain);
+    // SECURITY: scope session/admin cookies to the EXACT host only. This server
+    // hosts many sibling apps under *.peoplestar.com; the old code set the cookie
+    // domain to the parent (".peoplestar.com"), so silentbidpro's session_token
+    // and admin_session_token were sent to every sibling subdomain (and any one of
+    // them, if compromised, could replay them). An empty COOKIE_DOMAIN pins the
+    // cookie to the issuing host, which is what we want.
+    define('COOKIE_DOMAIN', '');
 }
 
 // ============================================================
@@ -133,10 +121,14 @@ function getDB() {
     static $db = null;
 
     if ($db === null) {
-        $db = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-
-        if ($db->connect_error) {
-            error_log("Database connection failed: " . $db->connect_error);
+        // Connect with CLIENT_FOUND_ROWS so UPDATE affected_rows reports MATCHED
+        // rows (not just changed ones). This lets dbUpdate() return a meaningful
+        // count for compare-and-swap guards (e.g. the auction closer) while a
+        // no-op save of identical data still counts as a matched row, preserving
+        // the behavior every existing truthy dbUpdate() caller relied on.
+        $db = mysqli_init();
+        if (!$db || !@$db->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME, null, null, MYSQLI_CLIENT_FOUND_ROWS)) {
+            error_log("Database connection failed: " . mysqli_connect_error());
             die(json_encode([
                 'status' => 'error',
                 'message' => 'Database connection failed'

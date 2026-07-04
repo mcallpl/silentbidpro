@@ -5,6 +5,14 @@
 // loads the premium generated-image demo auction.
 // ============================================================
 
+// SECURITY: this script TRUNCATEs the entire database. It must NEVER be
+// runnable over the web. On 2026-07-04 an unauthenticated HTTP request to this
+// path wiped production. CLI only.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('Forbidden');
+}
+
 require_once __DIR__ . '/../config.php';
 
 $files = [

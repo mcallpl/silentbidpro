@@ -291,8 +291,27 @@
 
 <main>
 
+<section id="forensic-2026-07-04" style="border:2px solid #B5179E;border-radius:12px;padding:1.25rem 1.5rem;margin:1.5rem 0;background:rgba(181,23,158,0.04)">
+  <h2 style="margin-top:0">🔬 Second Forensic Pass — 2026-07-04</h2>
+  <p class="section-sub">A full re-audit (six independent code reviews across auth, bidding, payments, admin/multi-tenancy, frontend, and notifications/infra) surfaced a new batch of defects on top of the July&nbsp;2 work. All items below were fixed, verified locally, and deployed to production the same day.</p>
+
+  <h3>🚨 Critical incident (contained)</h3>
+  <p>An <b>unauthenticated web endpoint</b> — <code class="inline">scripts/reset-premium-auction.php</code> — could <b>TRUNCATE the entire production database</b>. It was triggered by a routine reachability probe during the audit; production was <b>restored from the 14:30 backup</b> (no real bids lost — still in test phase). Root cause fixed: every destructive script now has a CLI-only guard, and the web server (nginx) now blocks <code class="inline">scripts/</code>, <code class="inline">logs/</code>, <code class="inline">sql/</code>, and sensitive file types (<code class="inline">deploy.sh</code>, <code class="inline">*.db</code>, <code class="inline">*.sql</code>, backups) that were previously world-readable — the old <code class="inline">.htaccess</code> rules never applied because the server is nginx, not Apache.</p>
+
+  <h3>Fixed &amp; deployed this pass</h3>
+  <ul>
+    <li><b>Security / auth:</b> unauthenticated PII dump on <code class="inline">diagnostic.php</code> gated; Stripe webhook forgery (verified against an API key + payload-chosen event) locked to the real <code class="inline">whsec_</code> secret; session cookies re-scoped to the exact host (were leaking to every <code class="inline">*.peoplestar.com</code> sibling); session token no longer travels in the item-page URL; global user CRUD + user-details gated to super-admin; event Stripe secret masked in API responses; branding edits authorized per-org; open-redirect on <code class="inline">bid.php?return=</code> and stored-XSS on admin event names closed.</li>
+    <li><b>Bidding engine:</b> Buy It Now rebuilt — it was rejecting the exact buy-now price, never creating a payment record (winners never got a checkout link), and blocked the current leader from raising their max; cent-precision bids (e.g. $10.35) no longer wrongly rejected; auction closer made race-safe with an advisory lock + compare-and-swap; a <code class="inline">mysqli::inTransaction()</code> call that would fatal on any bid error removed.</li>
+    <li><b>Payments:</b> checkout charges now round to cents (was charging a penny short); a late <code class="inline">charge.failed</code> can no longer flip a paid transaction to failed.</li>
+    <li><b>Frontend:</b> live feed now syncs the price + closed state (Quick Bid was submitting stale amounts); countdown no longer shows “NaN” on Safari or drift by timezone; item detail honors custom close times; service worker now registers (push was silently dead) and routes notification clicks to the right item.</li>
+    <li><b>Notifications / cron:</b> a broken Web Push call can no longer fatal the winner-processing cron; push subscriptions are only removed on a permanent 404/410; SMS links are built from the configured site URL (not the attacker-controllable Host header); cron checkout links no longer point at localhost.</li>
+  </ul>
+
+  <p class="section-sub"><b>Deferred (noted, lower risk):</b> admin password-login rate limiting; CSRF hardening on admin GET actions; the Web Push VAPID JWT crypto (push now fails <i>safely</i> — SMS remains the working channel); a two-tab double-checkout window (bounded to $1 while test-charge mode is on). The <b>“Buddy → Pro” rename is 100% complete</b> across code, filenames, and both databases; the only remaining “SilentBidBuddy” strings are vault key names that intentionally map to unchanged shared secrets.</p>
+</section>
+
 <section id="summary">
-  <h2>Executive Summary</h2>
+  <h2>Executive Summary <span style="font-weight:400;font-size:0.7em;color:#888">(July 2 pass — see the July 4 section above for the latest)</span></h2>
   <p class="section-sub">46 confirmed defects across the app (a few extra bugs surfaced underneath others while fixing). <b>44 are now fixed and verified</b> — including every critical, every security issue, the multi-tenant isolation, a real ECDH Web Push implementation, the global-identity user fix, and a fully-built "Buy It Now" feature. The 2 remaining are intentionally deferred as safe-to-leave (a daily-rotating legacy token that the primary username/password login makes moot, and a cosmetic logged-in-state mismatch). Resolved items are struck through and annotated with exactly what changed.</p>
 
   <div class="stat-grid">

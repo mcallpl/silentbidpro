@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/db-helpers.php';
 require_once __DIR__ . '/../../includes/admin-auth.php';
+require_once __DIR__ . '/../../includes/admin-auth-middleware.php'; // requireAdminOrgAccess/EventAccess
 require_once __DIR__ . '/../../includes/session-manager.php';
 
 header('Content-Type: application/json');
@@ -44,6 +45,12 @@ function handleUpdateOrganization($input) {
         http_response_code(400);
         die(json_encode(['status' => 'error', 'message' => 'organization_id is required']));
     }
+
+    // AUTHORIZATION: this rewrites org branding that propagates to every event in
+    // the org (and the live public site). Without this check any logged-in admin
+    // could pass another tenant's organization_id and deface it. Super admin or a
+    // manager of that org only.
+    requireAdminOrgAccess($org_id);
 
     // Validate organization exists
     $org = dbGetRow("SELECT id FROM organizations WHERE id = ?", [$org_id]);
@@ -167,6 +174,10 @@ function handleUpdateEvent($input) {
         http_response_code(400);
         die(json_encode(['status' => 'error', 'message' => 'organization_id is required']));
     }
+
+    // AUTHORIZATION: only a super admin or a manager of the target org may edit
+    // its events (prevents cross-tenant event edits via a supplied organization_id).
+    requireAdminOrgAccess($org_id);
 
     // Validate organization exists
     $org = dbGetRow("SELECT id FROM organizations WHERE id = ?", [$org_id]);

@@ -205,14 +205,14 @@ function sendPushNotifications($user_ids, $payload) {
 
         foreach ($subscriptions as $sub) {
             try {
-                $sent = sendPushMessageToEndpoint(
+                $code = sendPushMessageToEndpoint(
                     $sub['endpoint'],
                     $sub['auth_key'],
                     $sub['p256dh_key'],
                     $payload
                 );
 
-                if ($sent) {
+                if (in_array($code, [200, 201], true)) {
                     // Update last sent timestamp
                     dbUpdate(
                         "UPDATE push_subscriptions SET last_sent_at = NOW() WHERE id = ?",
@@ -220,16 +220,23 @@ function sendPushNotifications($user_ids, $payload) {
                     );
 
                     $results[] = ['user_id' => $user_id, 'status' => 'success', 'endpoint' => $sub['endpoint']];
-                } else {
-                    // Mark as inactive if delivery failed
+                } elseif (in_array($code, [404, 410], true)) {
+                    // Only 404/410 mean the subscription is permanently gone —
+                    // deactivate. A transient 5xx/429/timeout (or a systemic VAPID
+                    // failure) must NOT nuke every subscriber, or the retry path can
+                    // never succeed because everyone is now inactive.
                     dbUpdate(
                         "UPDATE push_subscriptions SET is_active = 0 WHERE id = ?",
                         [(int)$sub['id']]
                     );
-
+                    $results[] = ['user_id' => $user_id, 'status' => 'gone', 'endpoint' => $sub['endpoint']];
+                } else {
+                    // Transient — keep active for a later retry.
                     $results[] = ['user_id' => $user_id, 'status' => 'failed', 'endpoint' => $sub['endpoint']];
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
+                // \Throwable (not just Exception) so a TypeError/Error from crypto
+                // can never bubble up and fatal the caller (e.g. the cron closer).
                 error_log("[PUSH] Error sending to {$sub['endpoint']}: " . $e->getMessage());
                 $results[] = ['user_id' => $user_id, 'status' => 'error', 'endpoint' => $sub['endpoint']];
             }
@@ -259,11 +266,18 @@ function sendPushMessageToEndpoint($endpoint, $auth, $p256dh, $payload) {
         );
     } catch (\Throwable $e) {
         error_log('[PUSH] Encryption failed: ' . $e->getMessage());
-        return false;
+        return 0;
     }
 
-    // Create Authorization header
-    $vapidHeader = createVAPIDHeader($endpoint);
+    // Create Authorization header. VAPID JWT signing can throw a TypeError (a
+    // PHP Error, not an Exception) on a malformed key; contain it here so it can
+    // never escape and fatal a caller loop (e.g. the auction closer).
+    try {
+        $vapidHeader = createVAPIDHeader($endpoint);
+    } catch (\Throwable $e) {
+        error_log('[PUSH] VAPID header generation failed: ' . $e->getMessage());
+        return 0;
+    }
 
     // Send to push service (aes128gcm: single Content-Encoding header, body carries salt+key).
     $ch = curl_init();
@@ -292,8 +306,15 @@ function sendPushMessageToEndpoint($endpoint, $auth, $p256dh, $payload) {
         error_log("[PUSH] Push delivery failed ($httpCode): " . substr((string)$response, 0, 200));
     }
 
-    return $success;
+    // Return the HTTP status so the caller can distinguish a permanently-gone
+    // subscription (404/410 → deactivate) from a transient failure (5xx/429/0 →
+    // keep it and retry later). 0 means we never got to send.
+    return (int)$httpCode;
 }
+
+/**
+ * Encryption/pre-send failure sentinel handled by returning 0 above; see callers.
+ */
 
 /**
  * Wrap a raw uncompressed P-256 public point (65 bytes: 0x04||X||Y) as a PEM
@@ -545,7 +566,10 @@ function notifyBidPlaced($item_id, $new_bidder_id, $previous_bidder_id, $item_ti
             if ($should_send_sms && !empty($previous_bidder['phone_number'])) {
                 $settings = $event_id ? getEventSettings($event_id) : null;
 
-                $item_url = "https://" . ($_SERVER['HTTP_HOST'] ?? 'silentbidpro.com') . "/item.php?id={$item_id}";
+                // Build from the server-configured public URL, never the
+                // attacker-controllable Host header (SMS phishing vector), and
+                // never the not-yet-live .com fallback (dead link).
+                $item_url = rtrim(PUBLIC_SITE_URL, '/') . "/item.php?id={$item_id}";
                 $default_message = "You've been outbid on '{$item_title}'! Bid again: {$item_url}";
 
                 $sms_result = null;
@@ -662,7 +686,7 @@ function notifyWinner($item_id, $winner_id, $item_title, $winning_amount, $check
         $settings = $event_id ? getEventSettings($event_id) : null;
 
         if (!$checkout_url) {
-            $checkout_url = "https://" . ($_SERVER['HTTP_HOST'] ?? 'silentbidpro.com') . "/checkout.php?item_id={$item_id}";
+            $checkout_url = rtrim(PUBLIC_SITE_URL, '/') . "/checkout.php?item_id={$item_id}";
         }
 
         $sms_result = null;

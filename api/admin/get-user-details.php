@@ -15,7 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     die(json_encode(['status' => 'error', 'message' => 'Method not allowed']));
 }
 
-requireAdminAuth();
+// Returns a bidder's full cross-event PII, bid history, and wins by raw user_id
+// (an IDOR sink). Gate to super-admin, matching the global user-management scope.
+$admin = requireAdminAuth();
+if (empty($admin['is_super_admin'])) {
+    http_response_code(403);
+    die(json_encode(['status' => 'error', 'message' => 'Super admin privileges required']));
+}
 
 $user_id = (int)($_GET['user_id'] ?? 0);
 

@@ -42,12 +42,14 @@ function getActiveEvent() {
         return null;
     }
 
+    // Public DEFAULT auction (no ?event= link) must be OPEN only. A 'draft' event
+    // is one an admin is still preparing (unfinished items/prices) — it must not
+    // silently become the auction every visitor sees. Drafts remain reachable via
+    // an explicit ?event=<slug> preview link (see getEventBySlug).
     return dbGetRow(
         eventBaseSelect() . "
-         WHERE e.status IN ('open', 'draft')
-         ORDER BY
-            CASE WHEN e.status = 'open' THEN 0 ELSE 1 END,
-            e.auction_end_time ASC
+         WHERE e.status = 'open'
+         ORDER BY e.auction_end_time ASC
          LIMIT 1"
     );
 }
@@ -120,8 +122,17 @@ function getCurrentEvent() {
         }
     }
 
-    // 3) Legacy fallback: the single active event.
-    return getActiveEvent();
+    // 3) Not pinned and no ?event= link: fall back to the single active event AND
+    //    pin it. Without pinning here, a bidder who enters via a plain items.php
+    //    link has bidderPinnedEventId() == 0, so item.php and place-bid.php skip
+    //    the cross-auction guard entirely (could reach another auction's items by
+    //    id), and the "current event" could silently flip to a sooner-ending event
+    //    mid-session. Pinning locks them to one auction like the ?event= path does.
+    $event = getActiveEvent();
+    if ($event) {
+        $_SESSION['bidder_event_id'] = (int)$event['id'];
+    }
+    return $event;
 }
 
 /**

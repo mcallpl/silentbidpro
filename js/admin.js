@@ -1952,8 +1952,8 @@ const AdminDashboard = {
                 html += `
                     <tr>
                         <td>${event.id}</td>
-                        <td><strong>${event.name}</strong></td>
-                        <td>${event.organization_name || 'N/A'}</td>
+                        <td><strong>${this.escapeHtml(event.name)}</strong></td>
+                        <td>${this.escapeHtml(event.organization_name || 'N/A')}</td>
                         <td><span style="color: ${statusColor};">${statusDisplay}</span></td>
                         <td>${eventDate}</td>
                         <td>${event.item_count || 0}</td>
@@ -2336,8 +2336,8 @@ const AdminDashboard = {
 
                 data.assignments.forEach(assignment => {
                     html += `<tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 0.5rem;">${assignment.admin_name} (${assignment.admin_username})</td>
-                        <td style="padding: 0.5rem;"><strong>${assignment.role}</strong></td>
+                        <td style="padding: 0.5rem;">${this.escapeHtml(assignment.admin_name)} (${this.escapeHtml(assignment.admin_username)})</td>
+                        <td style="padding: 0.5rem;"><strong>${this.escapeHtml(assignment.role)}</strong></td>
                         <td style="padding: 0.5rem;">
                             <button class="btn btn-small btn-danger" onclick="AdminDashboard.removeAdminAssignment(${eventId}, ${assignment.admin_id})">Remove</button>
                         </td>

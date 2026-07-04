@@ -27,10 +27,10 @@ if (!$item_num) {
 $item = dbGetRow(
     "SELECT id, item_number, event_id, title, description, image_url, fair_market_value,
             starting_bid, min_increment, buy_now_price, current_high_bid,
-            current_high_bidder_id, auction_end_time, is_closed,
+            current_high_bidder_id, auction_end_time, close_time_override, is_closed,
             (SELECT COUNT(*) FROM bids b WHERE b.item_id = items.id) AS bid_count
-     FROM items WHERE item_number = ? OR id = ? LIMIT 1",
-    [(int)$item_num, (int)$item_num]
+     FROM items WHERE item_number = ? OR id = ? ORDER BY (item_number = ?) DESC LIMIT 1",
+    [(int)$item_num, (int)$item_num, (int)$item_num]
 );
 
 // AUCTION ISOLATION: block items that belong to a different auction than the one
@@ -74,8 +74,15 @@ if (!$is_authenticated) {
     if (!empty($_GET['auth_token'])) {
         $token = validateSessionToken($_GET['auth_token']);
         if ($token) {
-            $user = $token;
-            $is_authenticated = true;
+            // SECURITY: don't let the session token live in the URL (address bar,
+            // history, access logs, Referer, and the canonical/og:url meta tags).
+            // Re-issue it as the HttpOnly cookie, then redirect to a clean URL.
+            setSessionCookie(SESSION_COOKIE_NAME, $_GET['auth_token']);
+            $clean = strtok($_SERVER['REQUEST_URI'], '?');
+            $qs = $_GET;
+            unset($qs['auth_token']);
+            header('Location: ' . $clean . (!empty($qs) ? ('?' . http_build_query($qs)) : ''));
+            exit;
         }
     }
 }
@@ -85,7 +92,10 @@ $display_bid_amount = $has_bids ? (float)$item['current_high_bid'] : (float)$ite
 $next_bid_amount = $has_bids
     ? (float)$item['current_high_bid'] + (float)$item['min_increment']
     : (float)$item['starting_bid'];
-$time_remaining = strtotime($item['auction_end_time']) - time();
+// Use the EFFECTIVE close time (close_time_override when set) so the detail page
+// matches the listings and the bid gate.
+$effective_close_time = getEffectiveItemCloseTime($item);
+$time_remaining = strtotime($effective_close_time) - time();
 $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
 $has_favorites = favoritesAvailable();
 $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$user['id'], (int)$item['id']);
@@ -293,6 +303,13 @@ $bid_state = $user_has_bid ? ($is_user_winning ? 'winning' : 'outbid') : 'neutra
         window.SBB.itemId = <?php echo (int)$item['id']; ?>;
         window.SBB.isAuthenticated = <?php echo $is_authenticated ? 'true' : 'false'; ?>;
         window.SBB.auctionEndTime = '<?php echo $item['auction_end_time']; ?>';
+        // Server-computed remaining time (ms) and an absolute end epoch (ms). The
+        // countdown counts down from these instead of parsing the MySQL datetime
+        // string with new Date() — which returns Invalid Date on Safari/iOS (NaN
+        // timer) and is interpreted in the viewer's timezone elsewhere (hours off).
+        window.SBB.timeRemainingMs = <?php echo (int)(max(0, $time_remaining) * 1000); ?>;
+        window.SBB.serverNowMs = <?php echo (int)(time() * 1000); ?>;
+        window.SBB.auctionEndEpochMs = <?php echo (int)(strtotime($effective_close_time) * 1000); ?>;
         window.SBB.currentHighBid = <?php echo (float)$item['current_high_bid']; ?>;
         window.SBB.hasBids = <?php echo $has_bids ? 'true' : 'false'; ?>;
         window.SBB.minIncrement = <?php echo (float)$item['min_increment']; ?>;
