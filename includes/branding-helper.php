@@ -27,7 +27,7 @@ function getBrandingData() {
         return $_branding_cache;
     }
 
-    $event = getActiveEvent();
+    $event = getCurrentEvent();
     if (!$event) {
         $_branding_cache = false;
         return null;
@@ -60,7 +60,7 @@ function getBrandingData() {
  * @return array|null Array with location data or null
  */
 function getEventLocation() {
-    $event = getActiveEvent();
+    $event = getCurrentEvent();
     if (!$event) {
         return null;
     }
@@ -84,7 +84,7 @@ function getEventLocation() {
  * @return string|null
  */
 function getEventMission() {
-    $event = getActiveEvent();
+    $event = getCurrentEvent();
     if (!$event) {
         return null;
     }
@@ -131,7 +131,7 @@ function renderBrandingCSS() {
  */
 function renderBrandingStyleTag() {
     // First try to get active event
-    $event = getActiveEvent();
+    $event = getCurrentEvent();
     if (!$event) {
         // Use default CSS variables
         echo '<!-- No active event, using default branding -->' . "\n";

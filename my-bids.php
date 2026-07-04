@@ -19,7 +19,7 @@ if (!$user) {
     exit;
 }
 
-$event = getActiveEvent();
+$event = getCurrentEvent();
 $has_event_columns = dbColumnExists('items', 'event_id') && dbColumnExists('items', 'close_time_override');
 $has_favorites = favoritesAvailable();
 $close_expr = $has_event_columns ? "COALESCE(i.close_time_override, i.auction_end_time)" : "i.auction_end_time";

@@ -66,6 +66,20 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
 
         $event_id = (int)($item['event_id'] ?? 0);
 
+        // Attribution: name the source org/event so the Stripe checkout page,
+        // receipt, and dashboard clearly show where the money came from
+        // (e.g. "Ryan's Reach Foundation" vs "PeopleStar Enterprises").
+        $attribution = dbGetRow(
+            "SELECT o.name AS organization_name, e.name AS event_name
+             FROM events e JOIN organizations o ON o.id = e.organization_id
+             WHERE e.id = ?",
+            [$event_id]
+        );
+        $org_name = $attribution['organization_name'] ?? '';
+        $event_name = $attribution['event_name'] ?? '';
+        $line_description = ($org_name !== '' ? $org_name . ' — ' : '')
+            . 'Silent Auction Item #' . $item_id;
+
         // Get event-specific Stripe keys (or fall back to global)
         $stripe_keys = getEventStripeKeys($event_id);
         $public_key = $stripe_keys['public_key'];
@@ -101,7 +115,7 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             'customer' => $customer['id'],
             'line_items[0][price_data][currency]' => 'usd',
             'line_items[0][price_data][product_data][name]' => $item_title,
-            'line_items[0][price_data][product_data][description]' => 'Silent Auction Item #' . $item_id,
+            'line_items[0][price_data][product_data][description]' => $line_description,
             'line_items[0][price_data][unit_amount]' => (int)($amount * 100),
             'line_items[0][quantity]' => '1',
             'mode' => 'payment',
@@ -110,7 +124,9 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             'metadata[item_id]' => $item_id,
             'metadata[user_id]' => $user_id,
             'metadata[transaction_id]' => $transaction_id,
-            'metadata[event_id]' => $event_id
+            'metadata[event_id]' => $event_id,
+            'metadata[organization]' => $org_name,
+            'metadata[event_name]' => $event_name
         ];
 
         // Create Stripe checkout session via API using event-specific keys
