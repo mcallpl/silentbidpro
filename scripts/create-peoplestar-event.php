@@ -34,13 +34,13 @@ $TAGLINE       = 'Software, Built to Be Used.';
 $sourceSlug = $argv[1] ?? null;
 if ($sourceSlug) {
     $source = dbGetRow(
-        "SELECT e.id, e.organization_id, e.name, e.timezone, e.payment_mode
+        "SELECT e.id, e.slug, e.organization_id, e.name, e.timezone, e.payment_mode
          FROM events e WHERE e.slug = ?",
         [(string)$sourceSlug]
     );
 } else {
     $source = dbGetRow(
-        "SELECT e.id, e.organization_id, e.name, e.timezone, e.payment_mode
+        "SELECT e.id, e.slug, e.organization_id, e.name, e.timezone, e.payment_mode
          FROM events e JOIN organizations o ON o.id = e.organization_id
          WHERE o.name LIKE '%Ryan%'
          ORDER BY e.id DESC LIMIT 1"
@@ -146,5 +146,5 @@ if ($existingItems > 0) {
 $domain = defined('APP_DOMAIN') ? rtrim(APP_DOMAIN, '/') : 'https://silentbidbuddy.peoplestar.com';
 line('');
 line('Done. Two isolated auctions are now live:');
-line("  Ryan's Reach   -> {$domain}/items.php?event=" . ($sourceSlug ?: 'ryans-50th-birthday-celebration'));
+line("  Ryan's Reach   -> {$domain}/items.php?event=" . $source['slug']);
 line("  PeopleStar     -> {$domain}/items.php?event={$EVENT_SLUG}");
