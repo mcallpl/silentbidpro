@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F726B">
+<meta name="robots" content="noindex">
+<title>Silent Bid Buddy — Tester Walkthrough</title>
+<style>
+  :root {
+    --paper: #F5F4F0;
+    --card: #FFFFFF;
+    --ink: #22283A;
+    --ink-soft: #5A6072;
+    --ink-faint: #8A8F9C;
+    --brand: #0F726B;
+    --brand-deep: #0B534E;
+    --brand-tint: #E7F1EF;
+    --gold: #B0812B;
+    --gold-tint: #F3EBD9;
+    --line: #E6E2D9;
+    --field: #FBFAF7;
+    --shadow: 0 1px 2px rgba(34,40,58,.05), 0 10px 30px rgba(34,40,58,.06);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #13151B; --card: #1B1E26; --ink: #ECEAE3;
+      --ink-soft: #A3A7B3; --ink-faint: #767B88;
+      --brand: #52C2B4; --brand-deep: #2C8078; --brand-tint: #16302C;
+      --gold: #DFB566; --gold-tint: #2A2417; --line: #2A2E38; --field: #23272F;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 34px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #F5F4F0; --card: #FFFFFF; --ink: #22283A;
+    --ink-soft: #5A6072; --ink-faint: #8A8F9C;
+    --brand: #0F726B; --brand-deep: #0B534E; --brand-tint: #E7F1EF;
+    --gold: #B0812B; --gold-tint: #F3EBD9; --line: #E6E2D9; --field: #FBFAF7;
+    --shadow: 0 1px 2px rgba(34,40,58,.05), 0 10px 30px rgba(34,40,58,.06);
+  }
+  :root[data-theme="dark"] {
+    --paper: #13151B; --card: #1B1E26; --ink: #ECEAE3;
+    --ink-soft: #A3A7B3; --ink-faint: #767B88;
+    --brand: #52C2B4; --brand-deep: #2C8078; --brand-tint: #16302C;
+    --gold: #DFB566; --gold-tint: #2A2417; --line: #2A2E38; --field: #23272F;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 34px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .display {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 28px 20px 72px; }
+
+  /* ---- Sticky progress ---- */
+  .progress-wrap {
+    position: sticky; top: 0; z-index: 5;
+    margin: -28px -20px 26px; padding: 12px 20px;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .progress-track { flex: 1; height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .progress-bar { height: 100%; width: 0; background: var(--brand); border-radius: 999px; transition: width .35s ease; }
+  .progress-count { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+
+  /* ---- Hero ---- */
+  .brandline {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12px; letter-spacing: .13em; text-transform: uppercase;
+    font-weight: 600; color: var(--brand); margin-bottom: 22px;
+  }
+  .brandline .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+  .brandline .sep { color: var(--ink-faint); font-weight: 500; letter-spacing: .08em; }
+
+  h1.hero {
+    font-size: clamp(30px, 8vw, 42px); line-height: 1.08; letter-spacing: -.01em;
+    font-weight: 600; margin: 0 0 16px; text-wrap: balance;
+  }
+  h1.hero em { font-style: italic; color: var(--brand); }
+  .lede { font-size: 17px; color: var(--ink-soft); margin: 0 0 22px; max-width: 52ch; }
+
+  /* ---- How to use ---- */
+  .howto {
+    background: var(--brand-tint);
+    border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+    border-radius: var(--radius); padding: 16px 18px; margin-bottom: 20px;
+  }
+  .howto .eyebrow {
+    display: flex; align-items: center; gap: 7px;
+    text-transform: uppercase; letter-spacing: .11em; font-size: 11.5px;
+    font-weight: 700; color: var(--brand-deep); margin-bottom: 8px;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .howto .eyebrow { color: var(--brand); } }
+  :root[data-theme="dark"] .howto .eyebrow { color: var(--brand); }
+  .howto p { margin: 0; font-size: 15px; color: var(--ink); }
+  .howto p b { font-weight: 600; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--card); border: 1px solid var(--line);
+    padding: 7px 13px; border-radius: 999px;
+    font-size: 13.5px; font-weight: 500; color: var(--ink); box-shadow: var(--shadow);
+  }
+  .chip svg { width: 15px; height: 15px; color: var(--brand); flex: none; }
+
+  .note {
+    background: var(--gold-tint);
+    border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+    border-radius: var(--radius); padding: 15px 17px; font-size: 14.5px; color: var(--ink);
+    display: flex; gap: 11px; align-items: flex-start; margin-bottom: 14px;
+  }
+  .note .ic { color: var(--gold); flex: none; margin-top: 1px; }
+
+  .link-cta {
+    display: block; text-align: center; background: var(--brand); color: #fff;
+    text-decoration: none; font-weight: 600; font-size: 16px; padding: 15px 20px;
+    border-radius: 13px; margin: 22px 0 8px;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--brand) 32%, transparent);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .link-cta:hover { transform: translateY(-1px); box-shadow: 0 9px 24px color-mix(in srgb, var(--brand) 40%, transparent); }
+  .link-cta .u { display: block; font-size: 12.5px; font-weight: 500; opacity: .85; letter-spacing: .02em; margin-top: 3px; }
+
+  /* ---- Section heading ---- */
+  .section-eyebrow {
+    text-transform: uppercase; letter-spacing: .12em; font-size: 12px;
+    font-weight: 600; color: var(--ink-faint); margin: 40px 0 4px;
+  }
+  h2.section { font-size: 22px; font-weight: 600; margin: 0 0 6px; letter-spacing: -.01em; }
+  .section-sub { color: var(--ink-soft); font-size: 15px; margin: 0 0 20px; }
+
+  /* ---- Steps ---- */
+  .steps { display: flex; flex-direction: column; gap: 14px; }
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 18px 18px 17px; box-shadow: var(--shadow); position: relative;
+    transition: opacity .25s ease;
+  }
+  .step-top { display: flex; align-items: flex-start; gap: 14px; }
+  .lot {
+    flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+    border-radius: 11px; background: var(--brand-tint); color: var(--brand-deep);
+    border: 1px solid color-mix(in srgb, var(--brand) 22%, transparent);
+    text-align: center; line-height: 1; cursor: pointer; user-select: none;
+    transition: background .2s ease, color .2s ease;
+  }
+  .lot .lot-k { display: block; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; opacity: .7; margin-bottom: 2px; }
+  .lot .lot-n { display: block; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lot .lot-check { display: none; }
+  .step.done .lot { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .step.done .lot .lot-k, .step.done .lot .lot-n { display: none; }
+  .step.done .lot .lot-check { display: block; }
+  .step.done .step-body { opacity: .5; }
+
+  .step-body { flex: 1; min-width: 0; }
+  .step-body h3 { margin: 3px 0 8px; font-size: 17.5px; font-weight: 600; letter-spacing: -.005em; }
+  .step-body ul { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: 15px; }
+  .step-body ul li { margin-bottom: 5px; }
+  .step-body ul li::marker { color: var(--brand); }
+  .kbd {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--brand-tint); color: var(--brand-deep);
+    padding: 1px 6px; border-radius: 5px; font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .kbd { color: var(--brand); } }
+  :root[data-theme="dark"] .kbd { color: var(--brand); }
+
+  .check {
+    margin-top: 13px; background: var(--brand-tint); border-radius: 10px;
+    padding: 11px 13px; font-size: 14px; color: var(--ink);
+    display: flex; gap: 9px; align-items: flex-start;
+  }
+  .check .eye { color: var(--brand); flex: none; margin-top: 1px; }
+  .check b { color: var(--brand-deep); font-weight: 600; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .check b { color: var(--brand); } }
+  :root[data-theme="dark"] .check b { color: var(--brand); }
+
+  .step.feature { border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); background: linear-gradient(180deg, var(--gold-tint), var(--card) 55%); }
+  .feature-flag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 6px;
+  }
+
+  /* ---- Feedback form ---- */
+  .feedback {
+    margin-top: 34px; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 24px 20px; box-shadow: var(--shadow);
+  }
+  .feedback h2 { font-size: 22px; margin: 0 0 4px; font-weight: 600; letter-spacing: -.01em; }
+  .feedback p.sub { color: var(--ink-soft); font-size: 15px; margin: 0 0 20px; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 7px; color: var(--ink); }
+  .field label .hint { font-weight: 400; color: var(--ink-faint); }
+  .field input[type="text"], .field textarea {
+    width: 100%; background: var(--field); border: 1px solid var(--line);
+    border-radius: 11px; padding: 11px 13px; font: inherit; font-size: 15px;
+    color: var(--ink); resize: vertical; transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .field textarea { min-height: 78px; line-height: 1.5; }
+  .field input:focus, .field textarea:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--ink-faint); }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pills input { position: absolute; opacity: 0; pointer-events: none; }
+  .pills label {
+    display: inline-flex; cursor: pointer; margin: 0; font-weight: 500; font-size: 14px;
+    padding: 9px 15px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--field); color: var(--ink-soft);
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .pills input:checked + label { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 600; }
+  .pills input:focus-visible + label { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .btn {
+    flex: 1 1 auto; min-width: 150px; text-align: center; cursor: pointer;
+    font: inherit; font-weight: 600; font-size: 15.5px; padding: 14px 18px;
+    border-radius: 12px; border: 1px solid transparent; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 30%, transparent); }
+  .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--brand) 30%, transparent); }
+  .btn-secondary { background: var(--field); color: var(--ink); border-color: var(--line); }
+  .btn svg { width: 17px; height: 17px; }
+  .btn-hint { font-size: 12.5px; color: var(--ink-faint); margin: 12px 0 0; text-align: center; }
+  .copied { color: var(--brand); font-weight: 600; }
+
+  .thanks { text-align: center; margin-top: 30px; padding: 0 10px; }
+  .thanks .heart { font-size: 26px; }
+  .thanks p { color: var(--ink-soft); font-size: 15.5px; margin: 8px 0 0; }
+  .thanks .sig { font-size: 20px; color: var(--ink); margin-top: 6px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+  <div class="progress-wrap">
+    <span>Progress</span>
+    <div class="progress-track"><div class="progress-bar" id="bar"></div></div>
+    <span class="progress-count"><span id="doneN">0</span>/6</span>
+  </div>
+
+  <div class="brandline">
+    <span class="dot"></span>
+    <span>Silent Bid Buddy</span>
+    <span class="sep">/</span>
+    <span>Tester Preview</span>
+  </div>
+
+  <h1 class="hero display">Take the auction for a <em>test drive</em>.</h1>
+  <p class="lede">You're among the first real people to run through Silent Bid Buddy end to end. Follow the lots below in order — if anything breaks, looks off, or a text doesn't show up, that's exactly what we want to hear.</p>
+
+  <div class="howto">
+    <div class="eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+      How to use this
+    </div>
+    <p>Go through it <b>together</b> — same room or a phone call. Most steps you each do on <b>your own phone</b>; in one step you'll <b>bid against each other</b>. Give it about <b>20–30 minutes</b>, and leave your notes in the feedback box at the bottom.</p>
+  </div>
+
+  <div class="chips">
+    <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>20–30 minutes</span>
+    <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><circle cx="16.5" cy="9" r="2.6"/><path d="M4 19c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5"/><path d="M15 15c2.4 0 4 1.4 4 4"/></svg>Do it together</span>
+    <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg>Use your phone</span>
+    <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 3z"/></svg>A phone that gets texts</span>
+  </div>
+
+  <div class="note">
+    <svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+    <span>If something breaks or looks off, don't try to fix it — just jot a quick note and keep going. There's a feedback box at the bottom for everything.</span>
+  </div>
+
+  <a class="link-cta" href="https://silentbidbuddy.peoplestar.com" target="_blank" rel="noopener">
+    Open the auction
+    <span class="u">silentbidbuddy.peoplestar.com</span>
+  </a>
+
+  <p class="section-eyebrow">The walkthrough</p>
+  <h2 class="section display">Six lots, in order</h2>
+  <p class="section-sub">Tap a lot number to check it off as you go.</p>
+
+  <div class="steps" id="steps">
+
+    <div class="step" data-step>
+      <div class="step-top">
+        <div class="lot" role="button" tabindex="0" aria-label="Mark lot 1 done">
+          <span class="lot-k">Lot</span><span class="lot-n">1</span>
+          <svg class="lot-check" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </div>
+        <div class="step-body">
+          <h3>Sign in</h3>
+          <ul>
+            <li>Tap <span class="kbd">Sign In to Bid</span>.</li>
+            <li>Enter your <b>name, phone number, and email</b>.</li>
+            <li>You'll get a <b>6-digit code by text</b> — type it in.</li>
+          </ul>
+          <div class="check"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg><span><b>Check:</b> Did the text arrive quickly, and did the code let you in?</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-top">
+        <div class="lot" role="button" tabindex="0" aria-label="Mark lot 2 done">
+          <span class="lot-k">Lot</span><span class="lot-n">2</span>
+          <svg class="lot-check" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </div>
+        <div class="step-body">
+          <h3>Browse the items</h3>
+          <ul>
+            <li>Look through the auction items and open a few.</li>
+          </ul>
+          <div class="check"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg><span><b>Check:</b> Do the photos, descriptions, prices, and "time remaining" look right and read well on your phone?</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-top">
+        <div class="lot" role="button" tabindex="0" aria-label="Mark lot 3 done">
+          <span class="lot-k">Lot</span><span class="lot-n">3</span>
+          <svg class="lot-check" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </div>
+        <div class="step-body">
+          <h3>Place your first bid</h3>
+          <ul>
+            <li>Pick an item and <b>place a bid</b>.</li>
+          </ul>
+          <div class="check"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg><span><b>Check:</b> Did it confirm the bid, and are you now shown as the high bidder?</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step feature" data-step>
+      <div class="step-top">
+        <div class="lot" role="button" tabindex="0" aria-label="Mark lot 4 done">
+          <span class="lot-k">Lot</span><span class="lot-n">4</span>
+          <svg class="lot-check" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </div>
+        <div class="step-body">
+          <span class="feature-flag">★ The fun part — do this together</span>
+          <h3>Bid against each other</h3>
+          <ul>
+            <li>One person bids on an item. Then <b>someone else bids higher</b> on the <b>same</b> item.</li>
+            <li>The person who was leading should be <b>told they were outbid</b> (a text and/or a notification).</li>
+            <li>Keep going — take turns outbidding each other on one or two items.</li>
+          </ul>
+          <div class="check"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg><span><b>Check:</b> Did the outbid alerts arrive, and did the high bidder always update to the right person?</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-top">
+        <div class="lot" role="button" tabindex="0" aria-label="Mark lot 5 done">
+          <span class="lot-k">Lot</span><span class="lot-n">5</span>
+          <svg class="lot-check" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </div>
+        <div class="step-body">
+          <h3>Watch &amp; track</h3>
+          <ul>
+            <li><b>Watch</b> (favorite) an item you're not bidding on.</li>
+            <li>Open the <span class="kbd">My Bids &amp; Watching</span> menu.</li>
+          </ul>
+          <div class="check"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg><span><b>Check:</b> Does it correctly list what you bid on and what you're watching, with the right status — <b>Winning</b> or <b>Outbid</b>?</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" data-step>
+      <div class="step-top">
+        <div class="lot" role="button" tabindex="0" aria-label="Mark lot 6 done">
+          <span class="lot-k">Lot</span><span class="lot-n">6</span>
+          <svg class="lot-check" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </div>
+        <div class="step-body">
+          <h3>Win &amp; check out</h3>
+          <ul>
+            <li>On one item, let one person be the <b>final high bidder</b> (we'll close that item so you can test payment).</li>
+            <li>The winner opens <span class="kbd">My Bids</span> → the won item → <span class="kbd">Checkout</span>.</li>
+            <li>Pay with the <b>test card</b> <span class="kbd">4242 4242 4242 4242</span>, any future expiry, any CVC and ZIP.</li>
+          </ul>
+          <div class="check"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg><span><b>Check:</b> Did checkout go through and show a confirmation or receipt?</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ---- Feedback ---- -->
+  <div class="feedback">
+    <h2 class="display">Tell us how it went</h2>
+    <p class="sub">Fill in whatever you noticed — a few lines each is plenty. Then tap <b>Email my feedback</b> and it'll open a pre-filled message to us.</p>
+
+    <div class="field">
+      <label for="fName">Your name <span class="hint">(so we know who to thank)</span></label>
+      <input type="text" id="fName" placeholder="First name" autocomplete="name" />
+    </div>
+
+    <div class="field">
+      <label>Did you make it all the way through?</label>
+      <div class="pills">
+        <input type="radio" name="through" id="th1" value="Yes — all six lots"><label for="th1">Yes, all six</label>
+        <input type="radio" name="through" id="th2" value="Mostly"><label for="th2">Mostly</label>
+        <input type="radio" name="through" id="th3" value="Got stuck partway"><label for="th3">Got stuck</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="fBroke">Anything that broke, errored, or looked wrong?</label>
+      <textarea id="fBroke" placeholder="What happened, and on which step?"></textarea>
+    </div>
+
+    <div class="field">
+      <label for="fMissing">Any text or notification that didn't show up?</label>
+      <textarea id="fMissing" placeholder="The sign-in code, an outbid alert, a receipt…"></textarea>
+    </div>
+
+    <div class="field">
+      <label for="fConfusing">Anything confusing or hard to tap on your phone?</label>
+      <textarea id="fConfusing" placeholder="Buttons, wording, layout, small text…"></textarea>
+    </div>
+
+    <div class="field">
+      <label for="fGood">What felt good? <span class="hint">(we want to hear this too)</span></label>
+      <textarea id="fGood" placeholder="Anything you liked"></textarea>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-primary" id="emailBtn" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        Email my feedback
+      </a>
+      <button class="btn btn-secondary" id="copyBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        <span id="copyLabel">Copy my answers</span>
+      </button>
+    </div>
+    <p class="btn-hint" id="btnHint">The email opens in your own mail app — nothing sends until you hit send. Prefer to text it back? Use “Copy my answers.”</p>
+  </div>
+
+  <div class="thanks">
+    <div class="heart">❤️</div>
+    <p>Thank you for giving us your time. You're helping a real event run smoothly for people who need it.</p>
+    <p class="sig display">— Chip &amp; Kim</p>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    var steps = Array.prototype.slice.call(document.querySelectorAll('[data-step]'));
+    var bar = document.getElementById('bar');
+    var doneN = document.getElementById('doneN');
+    var KEY = 'sbb_tester_progress';
+
+    function save() {
+      try {
+        var state = steps.map(function (s) { return s.classList.contains('done') ? 1 : 0; });
+        localStorage.setItem(KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+    function refresh() {
+      var n = steps.filter(function (s) { return s.classList.contains('done'); }).length;
+      doneN.textContent = n;
+      bar.style.width = (n / steps.length * 100) + '%';
+    }
+    function toggle(s) { s.classList.toggle('done'); refresh(); save(); }
+
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEY) || '[]');
+      steps.forEach(function (s, i) { if (saved[i]) s.classList.add('done'); });
+    } catch (e) {}
+    refresh();
+
+    steps.forEach(function (s) {
+      var lot = s.querySelector('.lot');
+      lot.addEventListener('click', function () { toggle(s); });
+      lot.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(s); }
+      });
+    });
+
+    // ---- Feedback compilation ----
+    var EMAIL = 'mcallpl@gmail.com';
+    function val(id) { return (document.getElementById(id).value || '').trim(); }
+    function through() {
+      var r = document.querySelector('input[name="through"]:checked');
+      return r ? r.value : '(not answered)';
+    }
+    function compose() {
+      var name = val('fName');
+      var lines = [
+        'Name: ' + (name || '(not given)'),
+        'Made it through: ' + through(),
+        '',
+        'Broke / errored / looked wrong:',
+        val('fBroke') || '(nothing noted)',
+        '',
+        "Texts or notifications that didn't show up:",
+        val('fMissing') || '(nothing noted)',
+        '',
+        'Confusing or hard to tap:',
+        val('fConfusing') || '(nothing noted)',
+        '',
+        'What felt good:',
+        val('fGood') || '(nothing noted)'
+      ];
+      return lines.join('\n');
+    }
+
+    var emailBtn = document.getElementById('emailBtn');
+    emailBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var name = val('fName');
+      var subject = 'Silent Bid Buddy — Tester Feedback' + (name ? ' from ' + name : '');
+      var href = 'mailto:' + EMAIL +
+        '?subject=' + encodeURIComponent(subject) +
+        '&body=' + encodeURIComponent(compose());
+      window.location.href = href;
+    });
+
+    var copyBtn = document.getElementById('copyBtn');
+    var copyLabel = document.getElementById('copyLabel');
+    copyBtn.addEventListener('click', function () {
+      var text = compose();
+      function ok() {
+        copyLabel.textContent = 'Copied! Paste it into a text';
+        copyLabel.parentElement.classList.add('copied');
+        setTimeout(function () {
+          copyLabel.textContent = 'Copy my answers';
+          copyLabel.parentElement.classList.remove('copied');
+        }, 2600);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(ok, fallback);
+      } else { fallback(); }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { document.execCommand('copy'); ok(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+  })();
+</script>
+</body>
+</html>
