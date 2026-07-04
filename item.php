@@ -89,6 +89,14 @@ $time_remaining = strtotime($item['auction_end_time']) - time();
 $is_auction_open = !$item['is_closed'] && $time_remaining > 0;
 $has_favorites = favoritesAvailable();
 $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$user['id'], (int)$item['id']);
+
+// Viewer-relative bid state drives the live green (winning) / red (outbid)
+// indicator. 'neutral' = you haven't bid on this item.
+$user_has_bid = $is_authenticated && (int)dbGetValue(
+    "SELECT COUNT(*) FROM bids WHERE item_id = ? AND user_id = ?",
+    [(int)$item['id'], (int)$user['id']]
+) > 0;
+$bid_state = $user_has_bid ? ($is_user_winning ? 'winning' : 'outbid') : 'neutral';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -153,7 +161,7 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
         </section>
 
         <!-- Current Bid Block (Highlighted) -->
-        <section class="bid-block highlight">
+        <section class="bid-block highlight" data-bid-state="<?php echo $bid_state; ?>">
             <div class="bid-header"><?php echo $has_bids ? 'Current High Bid' : 'Opening Bid'; ?></div>
             <div class="current-bid-amount">
                 $<?php echo number_format($display_bid_amount, 2); ?>
@@ -170,6 +178,11 @@ $is_favorited = $is_authenticated && $has_favorites && isItemFavorited((int)$use
                     <span class="bidder-name">Another bidder is currently leading</span>
                 <?php endif; ?>
             </div>
+            <?php if ($bid_state === 'winning'): ?>
+                <div class="bid-status-indicator">🏆 You're winning</div>
+            <?php elseif ($bid_state === 'outbid'): ?>
+                <div class="bid-status-indicator">🔴 You've been outbid — bid again to retake the lead</div>
+            <?php endif; ?>
         </section>
 
         <!-- Countdown Timer -->

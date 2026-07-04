@@ -127,6 +127,7 @@ SBB.Bidding = {
 
             if (response && response.status === 'ok' && Array.isArray(response.bids)) {
                 this.renderBidFeed(response.bids);
+                this.applyBidStateFromFeed(response);
             } else {
                 console.warn('[BID SYNC] Invalid response:', response);
                 // Don't clear the feed on error - keep showing last known bids
@@ -163,6 +164,49 @@ SBB.Bidding = {
         });
 
         bidFeed.innerHTML = html;
+    },
+
+    // Derive the viewer's winning/outbid/neutral state from the live feed poll
+    // and paint the bid block accordingly (green = winning, red = outbid).
+    applyBidStateFromFeed(response) {
+        if (typeof response.viewer_is_winning === 'undefined') return;
+        let state = 'neutral';
+        if (response.viewer_has_bid) {
+            state = response.viewer_is_winning ? 'winning' : 'outbid';
+        }
+        this.applyBidState(state);
+    },
+
+    applyBidState(state) {
+        const block = document.querySelector('.bid-block');
+        if (!block) return;
+        const prev = block.getAttribute('data-bid-state') || 'neutral';
+        if (prev === state) return;
+        block.setAttribute('data-bid-state', state);
+
+        // Keep the colored status pill in sync.
+        let pill = block.querySelector('.bid-status-indicator');
+        if (state === 'neutral') {
+            if (pill) pill.remove();
+        } else {
+            if (!pill) {
+                pill = document.createElement('div');
+                pill.className = 'bid-status-indicator';
+                block.appendChild(pill);
+            }
+            pill.textContent = state === 'winning'
+                ? "🏆 You're winning"
+                : "🔴 You've been outbid — bid again to retake the lead";
+        }
+
+        // Fire the one-time alert only when you were leading and just got passed.
+        if (state === 'outbid' && prev === 'winning') {
+            block.classList.add('just-outbid');
+            setTimeout(() => block.classList.remove('just-outbid'), 900);
+            if (navigator.vibrate) {
+                try { navigator.vibrate([120, 60, 120]); } catch (e) {}
+            }
+        }
     },
 
     quickBid() {
@@ -313,6 +357,9 @@ SBB.Bidding = {
                 bidderStatus.innerHTML = '<span class="bidder-name">Another bidder is still ahead</span>';
             }
         }
+
+        // Paint the block green immediately after your own successful bid.
+        this.applyBidState(bidResponse.is_user_winning ? 'winning' : 'outbid');
 
         // Show anti-sniping message if applied
         if (bidResponse.was_anti_sniping_applied) {
