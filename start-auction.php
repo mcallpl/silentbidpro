@@ -50,7 +50,13 @@ if (!$user) {
 // ---- Handle "start" ----
 $started_minutes = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $minutes = max(1, min(600, (int)($_POST['minutes'] ?? 0)));
+    // A preset button submits `minutes`; the custom field submits `minutes_custom`.
+    // They must NOT share a name — an empty custom field would override the button.
+    $minutes = (int)($_POST['minutes'] ?? 0);
+    if ($minutes <= 0) {
+        $minutes = (int)($_POST['minutes_custom'] ?? 0);
+    }
+    $minutes = max(0, min(600, $minutes));
     if ($minutes > 0) {
         // Fresh run: clear bids and pending payments, reopen items, set the clock.
         dbDelete("DELETE FROM bids WHERE item_id IN (SELECT id FROM items WHERE event_id = ?)", [$event_id]);
@@ -135,7 +141,7 @@ $page_title = 'Start Auction - ' . APP_NAME;
                         <button type="submit" name="minutes" value="60">1 hour</button>
                     </div>
                     <div class="custom-row">
-                        <input type="number" name="minutes" min="1" max="600" placeholder="Custom minutes" />
+                        <input type="number" name="minutes_custom" min="1" max="600" placeholder="Custom minutes" />
                         <button type="submit" class="btn btn-secondary">Start</button>
                     </div>
                 </form>
