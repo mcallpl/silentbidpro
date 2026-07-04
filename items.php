@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/branding-helper.php';
 $user = getCurrentUser();
 $branding = getBrandingData();
 
-$event = getActiveEvent();
+$event = getCurrentEvent();
 $categories = $event ? getEventCategories((int)$event['id']) : [];
 $is_authenticated = $user !== false;
 $search = trim($_GET['q'] ?? '');
