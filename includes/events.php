@@ -100,16 +100,9 @@ function getCurrentEvent() {
         session_start();
     }
 
-    // 1) Explicit link pins the session to that auction.
-    if (!empty($_GET['event'])) {
-        $event = getEventBySlug((string)$_GET['event']);
-        if ($event) {
-            $_SESSION['bidder_event_id'] = (int)$event['id'];
-            return $event;
-        }
-    }
-
-    // 2) Previously pinned event for this browser session.
+    // 1) Once pinned, the auction is LOCKED for this session. A link pointing at a
+    //    different event is ignored, so a bidder can never cross into an auction
+    //    other than the one they first joined. (Checked BEFORE ?event= on purpose.)
     if (!empty($_SESSION['bidder_event_id'])) {
         $event = getEventById((int)$_SESSION['bidder_event_id']);
         if ($event) {
@@ -118,8 +111,29 @@ function getCurrentEvent() {
         unset($_SESSION['bidder_event_id']); // stale/deleted event
     }
 
+    // 2) Not pinned yet: the first event link sets (and thereby locks) the auction.
+    if (!empty($_GET['event'])) {
+        $event = getEventBySlug((string)$_GET['event']);
+        if ($event) {
+            $_SESSION['bidder_event_id'] = (int)$event['id'];
+            return $event;
+        }
+    }
+
     // 3) Legacy fallback: the single active event.
     return getActiveEvent();
+}
+
+/**
+ * The event id this browser session is pinned/locked to (0 if none yet).
+ * Used to enforce that bidders act only within their own auction.
+ * @return int
+ */
+function bidderPinnedEventId() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    return !empty($_SESSION['bidder_event_id']) ? (int)$_SESSION['bidder_event_id'] : 0;
 }
 
 /**

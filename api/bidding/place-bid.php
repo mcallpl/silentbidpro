@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/db-helpers.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/events.php';
 require_once __DIR__ . '/../../includes/bidding.php';
 require_once __DIR__ . '/../../includes/notifications.php';
 require_once __DIR__ . '/../../includes/event-notifier.php';
@@ -46,6 +47,18 @@ $max_bid_amount = !empty($input['max_bid_amount']) ? (float)$input['max_bid_amou
 if (!$item_id || $bid_amount <= 0) {
     http_response_code(400);
     die(json_encode(['status' => 'error', 'message' => 'Invalid item or bid amount']));
+}
+
+// AUCTION ISOLATION: a bidder may only bid within the auction their session is
+// locked to. Blocks crossing into another event via a direct item id / API call.
+$pinned_event_id = bidderPinnedEventId();
+if ($pinned_event_id) {
+    $item_event_id = (int)dbGetValue("SELECT event_id FROM items WHERE id = ?", [(int)$item_id]);
+    if ($item_event_id && $item_event_id !== $pinned_event_id) {
+        error_log('[BID] ⛔ Cross-auction bid blocked: user ' . $user['id'] . ' item ' . $item_id . ' (event ' . $item_event_id . ') vs pinned event ' . $pinned_event_id);
+        http_response_code(403);
+        die(json_encode(['status' => 'error', 'message' => 'This item is not part of your auction.']));
+    }
 }
 
 // Log attempt

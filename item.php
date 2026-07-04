@@ -25,13 +25,30 @@ if (!$item_num) {
 
 // Fetch item by number (or ID fallback)
 $item = dbGetRow(
-    "SELECT id, item_number, title, description, image_url, fair_market_value,
+    "SELECT id, item_number, event_id, title, description, image_url, fair_market_value,
             starting_bid, min_increment, buy_now_price, current_high_bid,
             current_high_bidder_id, auction_end_time, is_closed,
             (SELECT COUNT(*) FROM bids b WHERE b.item_id = items.id) AS bid_count
      FROM items WHERE item_number = ? OR id = ? LIMIT 1",
     [(int)$item_num, (int)$item_num]
 );
+
+// AUCTION ISOLATION: block items that belong to a different auction than the one
+// this session is locked to, so a bidder can't reach another auction's items.
+if ($item) {
+    $pinned_event_id = bidderPinnedEventId();
+    if ($pinned_event_id && (int)$item['event_id'] !== $pinned_event_id) {
+        renderPublicMessagePage([
+            'status' => 403,
+            'title' => 'Different Auction',
+            'heading' => 'That item is in another auction',
+            'message' => 'You can only view and bid on items in your own auction.',
+            'actions' => [
+                ['href' => 'items.php', 'label' => 'Back to Your Auction', 'class' => 'btn-primary']
+            ]
+        ]);
+    }
+}
 
 if (!$item) {
     renderPublicMessagePage([
