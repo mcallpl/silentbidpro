@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Push Notification Subscription
+// SILENT BID PRO — Push Notification Subscription
 // Save browser subscription endpoint to database
 // ============================================================
 

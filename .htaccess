@@ -5,8 +5,8 @@
     RewriteRule ^(.*)$ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
     # Send the public purchased domain to the current production host.
-    RewriteCond %{HTTP_HOST} ^(www\.)?silentbidbuddy\.com$ [NC]
-    RewriteRule ^(.*)$ https://silentbidbuddy.peoplestar.com/$1 [L,R=301]
+    RewriteCond %{HTTP_HOST} ^(www\.)?silentbidpro\.com$ [NC]
+    RewriteRule ^(.*)$ https://silentbidpro.peoplestar.com/$1 [L,R=301]
 
     # Remove .php extension from URLs
     RewriteCond %{REQUEST_FILENAME} !-f

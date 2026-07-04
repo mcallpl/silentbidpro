@@ -1,11 +1,11 @@
 -- ============================================================
--- SILENT BID BUDDY — MySQL Database Schema
+-- SILENT BID PRO — MySQL Database Schema
 -- Auction Platform for Nonprofit Galas
 -- ============================================================
 
 -- Create database if not exists
-CREATE DATABASE IF NOT EXISTS silentbidbuddy CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE silentbidbuddy;
+CREATE DATABASE IF NOT EXISTS silentbidpro CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE silentbidpro;
 
 -- ============================================================
 -- USERS TABLE

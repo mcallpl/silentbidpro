@@ -16,7 +16,7 @@ if (php_sapi_name() === 'cli') {
     $script_dir = dirname(__FILE__);
     if (strpos($script_dir, '/var/www') !== false) {
         // We're on production server
-        if (!defined('APP_DOMAIN_OVERRIDE')) define('APP_DOMAIN_OVERRIDE', 'https://silentbidbuddy.com');
+        if (!defined('APP_DOMAIN_OVERRIDE')) define('APP_DOMAIN_OVERRIDE', 'https://silentbidpro.com');
     }
 }
 

@@ -1,20 +1,20 @@
 #!/bin/bash
 # ============================================================
-# Silent Bid Buddy — Deployment Script for Digital Ocean
+# Silent Bid Pro — Deployment Script for Digital Ocean
 # Run as root: bash deploy.sh
 # ============================================================
 
 set -e
 
 echo "=================================="
-echo "SILENT BID BUDDY DEPLOYMENT"
+echo "SILENT BID PRO DEPLOYMENT"
 echo "=================================="
 echo ""
 
 # Configuration
-DOMAIN="silentbidbuddy"
-WEB_ROOT="/var/www/html/silentbidbuddy"
-DB_NAME="silentbidbuddy"
+DOMAIN="silentbidpro"
+WEB_ROOT="/var/www/html/silentbidpro"
+DB_NAME="silentbidpro"
 DB_USER="mcallpl"
 DB_PASS="amazing123"
 DB_HOST="localhost"
@@ -34,7 +34,7 @@ if [ -d "$WEB_ROOT/.git" ]; then
     git pull origin main
 else
     echo "   Cloning repository..."
-    git clone https://github.com/chipmcallister/silentbidbuddy.git $WEB_ROOT
+    git clone https://github.com/chipmcallister/silentbidpro.git $WEB_ROOT
 fi
 echo "   ✓ Repository cloned/updated"
 
@@ -58,7 +58,7 @@ if [ ! -f "$WEB_ROOT/config.local.php" ]; then
 define('DB_HOST', 'localhost');
 define('DB_USER', 'mcallpl');
 define('DB_PASS', 'amazing123');
-define('DB_NAME', 'silentbidbuddy');
+define('DB_NAME', 'silentbidpro');
 
 // Set domain based on server
 $protocol = !empty($_SERVER['HTTPS']) ? 'https' : 'http';
@@ -88,10 +88,10 @@ if command -v apache2ctl &> /dev/null; then
     a2enmod rewrite 2>/dev/null || true
 
     # Create Apache config if needed
-    if [ ! -f "/etc/apache2/sites-available/silentbidbuddy.conf" ]; then
-        cat > "/etc/apache2/sites-available/silentbidbuddy.conf" << EOF
+    if [ ! -f "/etc/apache2/sites-available/silentbidpro.conf" ]; then
+        cat > "/etc/apache2/sites-available/silentbidpro.conf" << EOF
 <VirtualHost *:80>
-    ServerName silentbidbuddy.${DOMAIN}
+    ServerName silentbidpro.${DOMAIN}
     ServerAlias *.${DOMAIN}
     DocumentRoot $WEB_ROOT
 
@@ -109,15 +109,15 @@ if command -v apache2ctl &> /dev/null; then
         SetHandler "proxy:unix:/run/php/php-fpm.sock|fcgi://localhost"
     </FilesMatch>
 
-    ErrorLog \${APACHE_LOG_DIR}/silentbidbuddy_error.log
-    CustomLog \${APACHE_LOG_DIR}/silentbidbuddy_access.log combined
+    ErrorLog \${APACHE_LOG_DIR}/silentbidpro_error.log
+    CustomLog \${APACHE_LOG_DIR}/silentbidpro_access.log combined
 </VirtualHost>
 EOF
         echo "   ✓ Apache config created"
     fi
 
     # Enable site
-    a2ensite silentbidbuddy.conf 2>/dev/null || true
+    a2ensite silentbidpro.conf 2>/dev/null || true
     apache2ctl configtest > /dev/null && apache2ctl reload || true
 fi
 
@@ -125,10 +125,10 @@ echo ""
 echo "📦 Step 7: Configure upload limits..."
 if command -v nginx &> /dev/null; then
     # Set nginx client_max_body_size to 25MB
-    if grep -q "client_max_body_size" /etc/nginx/sites-enabled/silentbidbuddy 2>/dev/null; then
-        sed -i 's/client_max_body_size.*/client_max_body_size 25M;/' /etc/nginx/sites-enabled/silentbidbuddy
+    if grep -q "client_max_body_size" /etc/nginx/sites-enabled/silentbidpro 2>/dev/null; then
+        sed -i 's/client_max_body_size.*/client_max_body_size 25M;/' /etc/nginx/sites-enabled/silentbidpro
     else
-        sed -i '/server {/a\    client_max_body_size 25M;' /etc/nginx/sites-enabled/silentbidbuddy
+        sed -i '/server {/a\    client_max_body_size 25M;' /etc/nginx/sites-enabled/silentbidpro
     fi
     nginx -t > /dev/null && systemctl reload nginx || true
     echo "   ✓ Nginx configured for 25MB uploads"

@@ -1,5 +1,5 @@
 /* ============================================================
-   SILENT BID BUDDY — Main Stylesheet
+   SILENT BID PRO — Main Stylesheet
    Mobile-first, responsive design with elegant aesthetics
    ============================================================ */
 
@@ -460,7 +460,7 @@ body {
     text-align: center;
     background:
         linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(255, 250, 240, 0.98)),
-        url("../images/brand/silent-bid-buddy-social-1200x630.png") center / cover no-repeat;
+        url("../images/brand/silent-bid-pro-social-1200x630.png") center / cover no-repeat;
 }
 
 .landing-cta h2,
@@ -2167,7 +2167,7 @@ body:not(.landing-page) {
 .auth-page {
     background:
         linear-gradient(90deg, rgba(9, 17, 33, 0.82), rgba(9, 17, 33, 0.38)),
-        url("../images/brand/silent-bid-buddy-social-1200x630.png") center / cover no-repeat;
+        url("../images/brand/silent-bid-pro-social-1200x630.png") center / cover no-repeat;
 }
 
 .auth-splash,
@@ -2230,7 +2230,7 @@ body:not(.landing-page) {
     position: relative;
     background:
         linear-gradient(90deg, rgba(23, 34, 53, 0.92), rgba(23, 34, 53, 0.64)),
-        url("../images/brand/silent-bid-buddy-social-1200x630.png") center / cover no-repeat;
+        url("../images/brand/silent-bid-pro-social-1200x630.png") center / cover no-repeat;
     color: #fff;
 }
 

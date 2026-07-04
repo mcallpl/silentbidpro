@@ -39,7 +39,7 @@ self.addEventListener('push', (event) => {
         };
 
         event.waitUntil(
-            self.registration.showNotification(title || 'Silent Bid Buddy', notificationOptions)
+            self.registration.showNotification(title || 'Silent Bid Pro', notificationOptions)
         );
 
         console.log('[SW] Notification displayed:', title);
@@ -47,7 +47,7 @@ self.addEventListener('push', (event) => {
         console.error('[SW] Error parsing push payload:', error);
         // Fallback notification if JSON parsing fails
         event.waitUntil(
-            self.registration.showNotification('Silent Bid Buddy', {
+            self.registration.showNotification('Silent Bid Pro', {
                 body: 'You have a new notification',
                 icon: NOTIFICATION_ICON,
                 badge: NOTIFICATION_BADGE
@@ -78,7 +78,7 @@ self.addEventListener('notificationclick', (event) => {
         }).then((clientList) => {
             // Check if app is already open in a window
             for (let client of clientList) {
-                if (client.url === urlToOpen || client.url.includes('silentbidbuddy')) {
+                if (client.url === urlToOpen || client.url.includes('silentbidpro')) {
                     return client.focus();
                 }
             }

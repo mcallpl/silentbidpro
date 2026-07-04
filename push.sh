@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Silent Bid Buddy — One-Command Push to GitHub + DigitalOcean
+# Silent Bid Pro — One-Command Push to GitHub + DigitalOcean
 # Usage: ./push.sh "Commit message here"
 # ============================================================
 
@@ -13,9 +13,9 @@ if [ -z "$1" ]; then
 fi
 
 COMMIT_MSG="$1"
-GITHUB_REPO="https://github.com/mcallpl/silentbidbuddy.git"
+GITHUB_REPO="https://github.com/mcallpl/silentbidpro.git"
 DO_SERVER="root@64.227.108.128"
-DO_PATH="/var/www/html/silentbidbuddy"
+DO_PATH="/var/www/html/silentbidpro"
 
 echo "=================================="
 echo "PUSHING TO GITHUB + DIGITALOCEAN"
@@ -64,4 +64,4 @@ echo "✓ Pushed to GitHub"
 echo "✓ Synced to DigitalOcean (64.227.108.128)"
 echo "✓ Permissions fixed (www-data ownership, proper read/write)"
 echo ""
-echo "Live at: https://silentbidbuddy.com/"
+echo "Live at: https://silentbidpro.com/"

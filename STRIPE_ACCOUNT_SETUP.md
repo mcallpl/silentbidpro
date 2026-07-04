@@ -1,5 +1,5 @@
 # Per-Event Stripe Account Configuration
-**Silent Bid Buddy**
+**Silent Bid Pro**
 
 ---
 
@@ -214,7 +214,7 @@ Obtain the Stripe API keys from the organization's Stripe account:
 ### Step 2: Configure via API or Admin Panel
 **Using API:**
 ```bash
-curl -X POST https://silentbidbuddy.com/api/admin/update-event-stripe-settings.php \
+curl -X POST https://silentbidpro.com/api/admin/update-event-stripe-settings.php \
   -H "Content-Type: application/json" \
   -H "Cookie: session_token=YOUR_SUPER_ADMIN_TOKEN" \
   -d '{
@@ -227,7 +227,7 @@ curl -X POST https://silentbidbuddy.com/api/admin/update-event-stripe-settings.p
 
 ### Step 3: Verify Configuration
 ```bash
-curl "https://silentbidbuddy.com/api/admin/get-event-stripe-settings.php?event_id=1" \
+curl "https://silentbidpro.com/api/admin/get-event-stripe-settings.php?event_id=1" \
   -H "Cookie: session_token=YOUR_SUPER_ADMIN_TOKEN"
 ```
 

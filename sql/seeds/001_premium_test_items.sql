@@ -7,7 +7,7 @@
 --   sql/migrations/002_favorites.sql
 -- ============================================================
 
-USE silentbidbuddy;
+USE silentbidpro;
 
 INSERT INTO organizations (
     name,
@@ -17,9 +17,9 @@ INSERT INTO organizations (
     brand_primary,
     brand_accent
 ) VALUES (
-    'Silent Bid Buddy Demo Foundation',
-    'silent-bid-buddy-demo-foundation',
-    'hello@silentbidbuddy.local',
+    'Silent Bid Pro Demo Foundation',
+    'silent-bid-pro-demo-foundation',
+    'hello@silentbidpro.local',
     '(555) 010-2026',
     '#245C4F',
     '#F2B84B'
@@ -33,7 +33,7 @@ INSERT INTO organizations (
 SET @organization_id := (
     SELECT id
     FROM organizations
-    WHERE slug = 'silent-bid-buddy-demo-foundation'
+    WHERE slug = 'silent-bid-pro-demo-foundation'
     LIMIT 1
 );
 

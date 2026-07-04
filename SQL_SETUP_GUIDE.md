@@ -7,7 +7,7 @@ This guide explains how to use the Ryan's Reach Foundation 50th Birthday Celebra
 ## File Location
 
 ```
-/Users/chipmcallister/Projects/silentbidbuddy/sql/populate-ryans-reach-event.sql
+/Users/chipmcallister/Projects/silentbidpro/sql/populate-ryans-reach-event.sql
 ```
 
 ## What Gets Created
@@ -64,7 +64,7 @@ This guide explains how to use the Ryan's Reach Foundation 50th Birthday Celebra
 
 ### Local Development
 ```bash
-mysql -u root -p silentbidbuddy < sql/populate-ryans-reach-event.sql
+mysql -u root -p silentbidpro < sql/populate-ryans-reach-event.sql
 ```
 
 ### DigitalOcean Production
@@ -73,10 +73,10 @@ mysql -u root -p silentbidbuddy < sql/populate-ryans-reach-event.sql
 ssh root@your-droplet-ip
 
 # Navigate to project
-cd /var/www/silentbidbuddy
+cd /var/www/silentbidpro
 
 # Execute script
-mysql -u root -p silentbidbuddy < sql/populate-ryans-reach-event.sql
+mysql -u root -p silentbidpro < sql/populate-ryans-reach-event.sql
 ```
 
 ## Verification
@@ -155,7 +155,7 @@ WHERE event_id = (SELECT id FROM events WHERE slug = 'ryans-50th-birthday-celebr
 
 ### Script Fails to Run
 - Verify MySQL is running: `mysql -u root -p -e "SELECT 1;"`
-- Check database exists: `mysql -u root -p -e "USE silentbidbuddy;"`
+- Check database exists: `mysql -u root -p -e "USE silentbidpro;"`
 - Ensure file permissions: `chmod 644 sql/populate-ryans-reach-event.sql`
 
 ### Event Not Showing in Admin

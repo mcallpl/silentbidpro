@@ -1,4 +1,4 @@
-# Silent Bid Buddy - Manual Feature Test Report
+# Silent Bid Pro - Manual Feature Test Report
 **Date:** Sun Jun 21 11:17:03 PDT 2026
 
 ## Test 1: Landing Page

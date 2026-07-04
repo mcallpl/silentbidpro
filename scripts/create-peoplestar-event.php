@@ -143,7 +143,7 @@ if ($existingItems > 0) {
 }
 
 // ---- 5. Summary ----
-$domain = defined('APP_DOMAIN') ? rtrim(APP_DOMAIN, '/') : 'https://silentbidbuddy.peoplestar.com';
+$domain = defined('APP_DOMAIN') ? rtrim(APP_DOMAIN, '/') : 'https://silentbidpro.peoplestar.com';
 line('');
 line('Done. Two isolated auctions are now live:');
 line("  Ryan's Reach   -> {$domain}/items.php?event=" . $source['slug']);

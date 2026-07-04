@@ -5,7 +5,7 @@
 -- Use before loading a fresh demo or starting a new auction.
 -- ============================================================
 
-USE silentbidbuddy;
+USE silentbidpro;
 
 SET FOREIGN_KEY_CHECKS = 0;
 

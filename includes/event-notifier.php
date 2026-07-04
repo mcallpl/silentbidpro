@@ -391,7 +391,7 @@ function createVAPIDHeader($endpoint) {
     $claims = [
         'aud' => parse_url($endpoint, PHP_URL_SCHEME) . '://' . parse_url($endpoint, PHP_URL_HOST),
         'exp' => time() + 3600,
-        'sub' => 'mailto:noreply@silentbidbuddy.com'
+        'sub' => 'mailto:noreply@silentbidpro.com'
     ];
 
     // Create JWT
@@ -545,7 +545,7 @@ function notifyBidPlaced($item_id, $new_bidder_id, $previous_bidder_id, $item_ti
             if ($should_send_sms && !empty($previous_bidder['phone_number'])) {
                 $settings = $event_id ? getEventSettings($event_id) : null;
 
-                $item_url = "https://" . ($_SERVER['HTTP_HOST'] ?? 'silentbidbuddy.com') . "/item.php?id={$item_id}";
+                $item_url = "https://" . ($_SERVER['HTTP_HOST'] ?? 'silentbidpro.com') . "/item.php?id={$item_id}";
                 $default_message = "You've been outbid on '{$item_title}'! Bid again: {$item_url}";
 
                 $sms_result = null;
@@ -662,7 +662,7 @@ function notifyWinner($item_id, $winner_id, $item_title, $winning_amount, $check
         $settings = $event_id ? getEventSettings($event_id) : null;
 
         if (!$checkout_url) {
-            $checkout_url = "https://" . ($_SERVER['HTTP_HOST'] ?? 'silentbidbuddy.com') . "/checkout.php?item_id={$item_id}";
+            $checkout_url = "https://" . ($_SERVER['HTTP_HOST'] ?? 'silentbidpro.com') . "/checkout.php?item_id={$item_id}";
         }
 
         $sms_result = null;

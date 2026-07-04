@@ -35,7 +35,7 @@ function renderPageMeta($options = []) {
     $title = $options['title'] ?? APP_NAME;
     $description = $options['description'] ?? 'A polished silent auction experience for generous bidders, trusted nonprofits, and joyful fundraising events.';
     $canonical = $options['canonical'] ?? currentCanonicalUrl();
-    $image = $options['image'] ?? absoluteAssetUrl('images/brand/silent-bid-buddy-social-1200x630.png');
+    $image = $options['image'] ?? absoluteAssetUrl('images/brand/silent-bid-pro-social-1200x630.png');
     $type = $options['type'] ?? 'website';
     $stylesheets = $options['stylesheets'] ?? ['css/branding-variables.css', 'css/main.css', 'css/branding.css', 'css/mobile.css'];
     ?>
@@ -53,7 +53,7 @@ function renderPageMeta($options = []) {
     <meta property="og:image" content="<?php echo htmlspecialchars($image); ?>">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Silent Bid Buddy fundraising auction preview">
+    <meta property="og:image:alt" content="Silent Bid Pro fundraising auction preview">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?php echo htmlspecialchars($title); ?>">

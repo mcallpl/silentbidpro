@@ -1,5 +1,5 @@
 /**
- * SILENT BID BUDDY — Bidding Interface
+ * SILENT BID PRO — Bidding Interface
  * Real-time updates, countdown timer, bid placement
  */
 

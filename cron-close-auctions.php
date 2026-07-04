@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // CRON JOB: Close Expired Auctions
-// Run every minute via cron: * * * * * cd /var/www/html/silentbidbuddy && php cron-close-auctions.php
+// Run every minute via cron: * * * * * cd /var/www/html/silentbidpro && php cron-close-auctions.php
 // ============================================================
 
 require_once __DIR__ . '/config.php';

@@ -1,9 +1,9 @@
 -- ============================================================
--- Silent Bid Buddy Migration 002: Bidder Favorites
+-- Silent Bid Pro Migration 002: Bidder Favorites
 -- Adds a watchlist table so bidders can track items across the event.
 -- ============================================================
 
-USE silentbidbuddy;
+USE silentbidpro;
 
 CREATE TABLE IF NOT EXISTS favorites (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

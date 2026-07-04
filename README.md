@@ -1,4 +1,4 @@
-# Silent Bid Buddy — Enterprise Silent Auction Platform
+# Silent Bid Pro — Enterprise Silent Auction Platform
 
 An elegant, mobile-first silent auction platform built for upscale nonprofit galas. Features passwordless SMS authentication, real-time bidding with anti-sniping mechanics, and frictionless Stripe checkout.
 
@@ -42,7 +42,7 @@ An elegant, mobile-first silent auction platform built for upscale nonprofit gal
 ## Project Structure
 
 ```
-/silentbidbuddy/
+/silentbidpro/
 ├── config.php                 # Configuration & database connection
 ├── index.php                  # Auth splash screen
 ├── item.php                   # Main bidding interface
@@ -87,7 +87,7 @@ An elegant, mobile-first silent auction platform built for upscale nonprofit gal
 
 1. **Clone and configure:**
    ```bash
-   cd /Users/chipmcallister/Projects/silentbidbuddy
+   cd /Users/chipmcallister/Projects/silentbidpro
    cp config.php config.php  # Already configured in template
    ```
 
@@ -98,9 +98,9 @@ An elegant, mobile-first silent auction platform built for upscale nonprofit gal
 
    To load the newer event foundation and premium demo items:
    ```bash
-   mysql -u mcallpl -p amazing123 silentbidbuddy < sql/migrations/001_event_foundation.sql
-   mysql -u mcallpl -p amazing123 silentbidbuddy < sql/migrations/002_favorites.sql
-   mysql -u mcallpl -p amazing123 silentbidbuddy < sql/seeds/001_premium_test_items.sql
+   mysql -u mcallpl -p amazing123 silentbidpro < sql/migrations/001_event_foundation.sql
+   mysql -u mcallpl -p amazing123 silentbidpro < sql/migrations/002_favorites.sql
+   mysql -u mcallpl -p amazing123 silentbidpro < sql/seeds/001_premium_test_items.sql
    ```
 
 3. **Add credentials to vault:**
@@ -315,8 +315,8 @@ Manually close all active auctions:
 2. **Clone repository:**
    ```bash
    cd /var/www
-   git clone https://github.com/chipmcallister/silentbidbuddy.git
-   cd silentbidbuddy
+   git clone https://github.com/chipmcallister/silentbidpro.git
+   cd silentbidpro
    ```
 
 3. **Create local config:**
@@ -332,21 +332,21 @@ Manually close all active auctions:
 
 5. **Set permissions:**
    ```bash
-   chown -R www-data:www-data /var/www/silentbidbuddy
-   chmod 755 /var/www/silentbidbuddy
-   chmod 644 /var/www/silentbidbuddy/*.php
+   chown -R www-data:www-data /var/www/silentbidpro
+   chmod 755 /var/www/silentbidpro
+   chmod 644 /var/www/silentbidpro/*.php
    mkdir -p logs uploads qr_codes
    chmod 755 logs uploads qr_codes
    ```
 
 6. **Configure Apache/Nginx:**
    - Enable mod_rewrite
-   - Point DocumentRoot to `/var/www/silentbidbuddy`
+   - Point DocumentRoot to `/var/www/silentbidpro`
    - Enable .htaccess in Apache config
 
 7. **Test:**
    ```bash
-   curl https://silentbidbuddy.yourdomain.com/
+   curl https://silentbidpro.yourdomain.com/
    ```
 
 ## Testing Checklist
@@ -373,10 +373,10 @@ For production, add these cron jobs:
 # IMPORTANT: run the standalone CLI script, NOT api/admin/close-auction.php —
 # that endpoint requires admin authentication (cookie/token) which a CLI cron
 # invocation does not have, so it would 401 and never close anything.
-* * * * * /usr/bin/php /var/www/silentbidbuddy/cron-close-auctions.php >/dev/null 2>&1
+* * * * * /usr/bin/php /var/www/silentbidpro/cron-close-auctions.php >/dev/null 2>&1
 
 # Cleanup old verification codes and sessions (daily)
-0 2 * * * /usr/bin/php -r 'require("/var/www/silentbidbuddy/config.php"); require("/var/www/silentbidbuddy/includes/auction-engine.php"); cleanupExpiredRecords();' >/dev/null 2>&1
+0 2 * * * /usr/bin/php -r 'require("/var/www/silentbidpro/config.php"); require("/var/www/silentbidpro/includes/auction-engine.php"); cleanupExpiredRecords();' >/dev/null 2>&1
 ```
 
 ## Performance Optimization

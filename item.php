@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Item Detail & Bidding Interface
+// SILENT BID PRO — Item Detail & Bidding Interface
 // Main auction page with real-time updates
 // ============================================================
 
@@ -103,7 +103,7 @@ $bid_state = $user_has_bid ? ($is_user_winning ? 'winning' : 'outbid') : 'neutra
 <head>
     <?php renderPageMeta([
         'title' => htmlspecialchars_decode($page_title),
-        'description' => 'Bid on ' . $item['title'] . ' and support this fundraising auction through Silent Bid Buddy.',
+        'description' => 'Bid on ' . $item['title'] . ' and support this fundraising auction through Silent Bid Pro.',
         'type' => 'product'
     ]); ?>
 </head>

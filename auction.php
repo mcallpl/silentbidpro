@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 // ============================================================
-// SILENT BID BUDDY — CLI Administration Tool
+// SILENT BID PRO — CLI Administration Tool
 // Command-line interface for auction management
 // Usage: php auction.php <command> [options]
 // ============================================================
@@ -204,7 +204,7 @@ class AuctionCLI {
 
             // Display header
             echo str_repeat("=", 60) . "\n";
-            echo str_pad("SILENT BID BUDDY — LIVE AUCTION", 60) . "\n";
+            echo str_pad("SILENT BID PRO — LIVE AUCTION", 60) . "\n";
             echo str_repeat("=", 60) . "\n";
             echo "Last Updated: " . date('Y-m-d H:i:s') . "\n\n";
 
@@ -347,7 +347,7 @@ class AuctionCLI {
 
     private function showHelp() {
         echo "\n" . str_repeat("=", 60) . "\n";
-        echo "SILENT BID BUDDY — Auction Administration CLI\n";
+        echo "SILENT BID PRO — Auction Administration CLI\n";
         echo str_repeat("=", 60) . "\n\n";
 
         echo "AVAILABLE COMMANDS:\n\n";

@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SILENT BID BUDDY — Payment Success Page
+// SILENT BID PRO — Payment Success Page
 // Post-checkout confirmation
 // ============================================================
 
@@ -70,7 +70,7 @@ if ($is_paid) {
 <head>
     <?php renderPageMeta([
         'title' => $page_title,
-        'description' => 'Thank you for supporting this fundraising auction through Silent Bid Buddy.'
+        'description' => 'Thank you for supporting this fundraising auction through Silent Bid Pro.'
     ]); ?>
 </head>
 <body class="success-page">

@@ -11,7 +11,7 @@
 -- access the app with proper branding and event details.
 -- ============================================================
 
-USE silentbidbuddy;
+USE silentbidpro;
 
 -- ============================================================
 -- STEP 1: CREATE ORGANIZATION

@@ -1,6 +1,6 @@
 {
-  "name": "Silent Bid Buddy",
-  "short_name": "Bid Buddy",
+  "name": "Silent Bid Pro",
+  "short_name": "Bid Pro",
   "description": "A polished silent auction experience for generous bidders, trusted nonprofits, and joyful fundraising events.",
   "start_url": "/items.php",
   "display": "standalone",
