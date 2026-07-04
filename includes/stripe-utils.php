@@ -80,6 +80,17 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
         $line_description = ($org_name !== '' ? $org_name . ' — ' : '')
             . 'Silent Auction Item #' . $item_id;
 
+        // TEST MODE: when TEST_CHARGE_DOLLAR is enabled (typically in the test
+        // server's config.local.php), the bidder completes the full purchase flow
+        // but is only ever charged $1, regardless of the winning bid. The Stripe
+        // charge and the recorded transaction use the same amount so they stay in
+        // sync. Leave this undefined in real production to charge the real amount.
+        $charge_amount = $amount;
+        if (defined('TEST_CHARGE_DOLLAR') && TEST_CHARGE_DOLLAR) {
+            $charge_amount = 1.00;
+            $line_description .= ' (test charge — $1)';
+        }
+
         // Get event-specific Stripe keys (or fall back to global)
         $stripe_keys = getEventStripeKeys($event_id);
         $public_key = $stripe_keys['public_key'];
@@ -89,7 +100,7 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             return ['success' => false, 'error' => 'Stripe configuration not available'];
         }
 
-        $payment_request = ensurePendingPaymentRequest($item_id, $user_id, $amount);
+        $payment_request = ensurePendingPaymentRequest($item_id, $user_id, $charge_amount);
         if (!$payment_request['success']) {
             return ['success' => false, 'error' => 'Failed to create payment request'];
         }
@@ -116,7 +127,7 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             'line_items[0][price_data][currency]' => 'usd',
             'line_items[0][price_data][product_data][name]' => $item_title,
             'line_items[0][price_data][product_data][description]' => $line_description,
-            'line_items[0][price_data][unit_amount]' => (int)($amount * 100),
+            'line_items[0][price_data][unit_amount]' => (int)($charge_amount * 100),
             'line_items[0][quantity]' => '1',
             'mode' => 'payment',
             'success_url' => APP_DOMAIN . '/success.php?session_id={CHECKOUT_SESSION_ID}',
