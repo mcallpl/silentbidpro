@@ -22,5 +22,12 @@ if ($token) {
 
 clearSessionCookie(SESSION_COOKIE_NAME);
 
+// Also release the auction this session was locked to, so signing out and
+// re-opening an event link cleanly re-pins to that auction.
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+unset($_SESSION['bidder_event_id']);
+
 echo json_encode(['status' => 'ok', 'message' => 'Signed out']);
 ?>
