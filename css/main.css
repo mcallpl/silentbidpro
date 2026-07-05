@@ -82,10 +82,24 @@ body {
     --landing-cream: #fffaf0;
     --landing-mist: #f4f7f2;
     --landing-line: rgba(23, 34, 53, 0.14);
+    /* Height reserved for the fixed .landing-nav so page content clears it. */
+    --landing-nav-h: 4.75rem;
     background: #fffdf8;
     color: var(--landing-ink);
     font-family: "Avenir Next", "Trebuchet MS", var(--font-family);
     overflow-x: hidden;
+}
+
+/* The nav is position:fixed, so the first thing in <main> (the event banner)
+   would otherwise sit underneath it. Push all landing content below the nav. */
+.landing-page main {
+    padding-top: var(--landing-nav-h);
+}
+
+/* Anchor links (#experience, #tools, ...) should stop below the fixed nav
+   instead of scrolling their headings underneath it. */
+.landing-page [id] {
+    scroll-margin-top: var(--landing-nav-h);
 }
 
 .landing-page h1,
