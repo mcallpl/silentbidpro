@@ -81,7 +81,7 @@ if (!defined('VAPID_SUBJECT')) define('VAPID_SUBJECT', 'mailto:' . ($vault_conta
 if (!defined('UPLOADS_DIR')) define('UPLOADS_DIR', __DIR__ . '/uploads/');
 if (!defined('QR_CODES_DIR')) define('QR_CODES_DIR', __DIR__ . '/qr_codes/');
 
-if (!defined('PUBLIC_SITE_URL')) define('PUBLIC_SITE_URL', getenv('PUBLIC_SITE_URL') ?: 'https://silentbidpro.peoplestar.com');
+if (!defined('PUBLIC_SITE_URL')) define('PUBLIC_SITE_URL', getenv('PUBLIC_SITE_URL') ?: 'https://silentbidpro.com');
 if (!defined('APP_DOMAIN')) {
     // Auto-detect domain from current request or environment variable
     if (!empty($_SERVER['HTTP_HOST'])) {
