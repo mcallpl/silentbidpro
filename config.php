@@ -38,6 +38,13 @@ if (!defined('STRIPE_SECRET_KEY')) define('STRIPE_SECRET_KEY', $vault_stripe_sec
 if (!defined('STRIPE_PUBLISHABLE_KEY')) define('STRIPE_PUBLISHABLE_KEY', $vault_stripe_publishable_key ?? '');
 if (!defined('STRIPE_WEBHOOK_SECRET')) define('STRIPE_WEBHOOK_SECRET', $vault_stripe_webhook_secrets['SilentBidBuddy'] ?? '');
 
+// Stripe Billing (SaaS subscriptions, WEB ONLY). Recurring Price IDs come from
+// the Stripe dashboard (or scripts/setup-billing-prices.php). The billing webhook
+// has its OWN signing secret, separate from the auction-payment webhook.
+if (!defined('STRIPE_PRICE_PRO')) define('STRIPE_PRICE_PRO', $vault_stripe_price_pro ?? getenv('STRIPE_PRICE_PRO') ?: '');
+if (!defined('STRIPE_PRICE_ENTERPRISE')) define('STRIPE_PRICE_ENTERPRISE', $vault_stripe_price_enterprise ?? getenv('STRIPE_PRICE_ENTERPRISE') ?: '');
+if (!defined('STRIPE_BILLING_WEBHOOK_SECRET')) define('STRIPE_BILLING_WEBHOOK_SECRET', $vault_stripe_billing_webhook_secret ?? getenv('STRIPE_BILLING_WEBHOOK_SECRET') ?: '');
+
 // ============================================================
 // TWILIO CONFIGURATION
 // ============================================================
