@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/admin-auth.php';
 require_once __DIR__ . '/../../includes/admin-auth-middleware.php';
+require_once __DIR__ . '/../../includes/plans.php';
 
 header('Content-Type: application/json');
 
@@ -75,6 +76,27 @@ if (!in_array($status, $valid_statuses)) {
 if (!in_array($payment_mode, $valid_payment_modes)) {
     http_response_code(400);
     die(json_encode(['status' => 'error', 'message' => 'Invalid payment mode']));
+}
+
+// SaaS gating: concurrent active-event limit (Free 1 / Pro 3 / Enterprise ∞).
+// Only enforced when this request would ACTIVATE the event (set it to 'open');
+// the check excludes this event, so re-saving an already-open event never trips.
+if ($status === 'open') {
+    $org_id = orgIdForEvent((int)$event_id);
+    if ($org_id && !orgCanOpenAnotherEvent($org_id, (int)$event_id)) {
+        $plan = getOrgPlan($org_id);
+        $limit = planLimit($plan, 'max_active_events');
+        http_response_code(403);
+        die(json_encode([
+            'status'        => 'error',
+            'code'          => 'upgrade_required',
+            'feature'       => 'max_active_events',
+            'current_plan'  => $plan,
+            'required_plan' => $plan === 'free' ? 'pro' : 'enterprise',
+            'message'       => "Your " . planFeatures($plan)['label'] . " plan allows {$limit} active event"
+                             . ($limit === 1 ? '' : 's') . " at a time. Close an event or upgrade on the web to run more concurrently.",
+        ]));
+    }
 }
 
 // Update event
