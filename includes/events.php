@@ -102,24 +102,27 @@ function getCurrentEvent() {
         session_start();
     }
 
-    // 1) Once pinned, the auction is LOCKED for this session. A link pointing at a
-    //    different event is ignored, so a bidder can never cross into an auction
-    //    other than the one they first joined. (Checked BEFORE ?event= on purpose.)
-    if (!empty($_SESSION['bidder_event_id'])) {
-        $event = getEventById((int)$_SESSION['bidder_event_id']);
-        if ($event) {
-            return $event;
-        }
-        unset($_SESSION['bidder_event_id']); // stale/deleted event
-    }
-
-    // 2) Not pinned yet: the first event link sets (and thereby locks) the auction.
+    // 1) An explicit ?event=<slug> link ALWAYS wins and (re)pins the session to that
+    //    auction. This lets a bidder follow a specific auction's link even if they
+    //    previously landed on the default homepage (which pins them to the flagship
+    //    event) — essential for running separate test groups on separate events.
+    //    Bidding stays guarded to the pinned event, so this only changes which
+    //    public auction the bidder is viewing, never lets them cross-bid.
     if (!empty($_GET['event'])) {
         $event = getEventBySlug((string)$_GET['event']);
         if ($event) {
             $_SESSION['bidder_event_id'] = (int)$event['id'];
             return $event;
         }
+    }
+
+    // 2) No link: stay locked to the auction already pinned for this session.
+    if (!empty($_SESSION['bidder_event_id'])) {
+        $event = getEventById((int)$_SESSION['bidder_event_id']);
+        if ($event) {
+            return $event;
+        }
+        unset($_SESSION['bidder_event_id']); // stale/deleted event
     }
 
     // 3) Not pinned and no ?event= link: fall back to the single active event AND
