@@ -46,8 +46,14 @@ if (!$normalized_phone) {
     die(json_encode(['status' => 'error', 'message' => 'Invalid phone number']));
 }
 
+// App Store review demo login: the demo phone + fixed code bypasses SMS
+// verification (constant-time compare). Everything else (session, user) is normal.
+$is_demo_login = DEMO_LOGIN_PHONE !== ''
+    && $normalized_phone === DEMO_LOGIN_PHONE
+    && hash_equals((string)DEMO_LOGIN_CODE, (string)$code);
+
 // Verify code
-if (!verifyCode($normalized_phone, $code)) {
+if (!$is_demo_login && !verifyCode($normalized_phone, $code)) {
     http_response_code(401);
     die(json_encode([
         'status' => 'error',

@@ -37,6 +37,13 @@ if (!$normalized_phone) {
     die(json_encode(['status' => 'error', 'message' => 'Invalid phone number format']));
 }
 
+// App Store review demo number: never send a real SMS. The reviewer signs in
+// with the fixed demo code documented in the App Review notes.
+if (DEMO_LOGIN_PHONE !== '' && $normalized_phone === DEMO_LOGIN_PHONE) {
+    http_response_code(200);
+    die(json_encode(['status' => 'ok', 'message' => 'Enter the demo code from the review notes.']));
+}
+
 // Check rate limit
 if (isPhoneRateLimited($normalized_phone)) {
     http_response_code(429);

@@ -45,6 +45,12 @@ if (!defined('STRIPE_PRICE_PRO')) define('STRIPE_PRICE_PRO', $vault_stripe_price
 if (!defined('STRIPE_PRICE_ENTERPRISE')) define('STRIPE_PRICE_ENTERPRISE', $vault_stripe_price_enterprise ?? getenv('STRIPE_PRICE_ENTERPRISE') ?: '');
 if (!defined('STRIPE_BILLING_WEBHOOK_SECRET')) define('STRIPE_BILLING_WEBHOOK_SECRET', $vault_stripe_billing_webhook_secret ?? getenv('STRIPE_BILLING_WEBHOOK_SECRET') ?: '');
 
+// Demo login for App Store review: Apple's reviewer can't receive our SMS, so a
+// designated demo phone + fixed code bypasses Twilio and signs into a pre-seeded
+// demo account. Enabled only when both are set (prod config.local.php).
+if (!defined('DEMO_LOGIN_PHONE')) define('DEMO_LOGIN_PHONE', $vault_demo_login_phone ?? '');
+if (!defined('DEMO_LOGIN_CODE')) define('DEMO_LOGIN_CODE', $vault_demo_login_code ?? '');
+
 // ============================================================
 // TWILIO CONFIGURATION
 // ============================================================
