@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/db-helpers.php';
 require_once __DIR__ . '/notifications.php';
+require_once __DIR__ . '/apns.php';
 
 /**
  * Track notification delivery status with retry capability
@@ -562,6 +563,11 @@ function notifyBidPlaced($item_id, $new_bidder_id, $previous_bidder_id, $item_ti
                 );
             }
 
+            // Native iOS push (APNs) — no-op until the .p8 key is configured.
+            sendApnsToUser($previous_bidder_id, 'You’ve been outbid!',
+                'Someone bid ' . formatCurrency($new_bid_amount) . " on '{$item_title}'",
+                ['item_id' => (int)$item_id]);
+
             // Send SMS if enabled for this event
             if ($should_send_sms && !empty($previous_bidder['phone_number'])) {
                 $settings = $event_id ? getEventSettings($event_id) : null;
@@ -647,6 +653,11 @@ function notifyWinner($item_id, $winner_id, $item_title, $winning_amount, $check
     if (!$winner) {
         return $delivery_results;
     }
+
+    // Native iOS push (APNs) — no-op until the .p8 key is configured.
+    sendApnsToUser($winner_id, 'You won! 🎉',
+        "You won '{$item_title}' for " . formatCurrency($winning_amount) . '. Tap to complete payment.',
+        ['item_id' => (int)$item_id, 'action' => 'checkout']);
 
     // Send push notification
     $push_results = sendPushNotifications($winner_id, [

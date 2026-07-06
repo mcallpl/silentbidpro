@@ -51,6 +51,15 @@ if (!defined('STRIPE_BILLING_WEBHOOK_SECRET')) define('STRIPE_BILLING_WEBHOOK_SE
 if (!defined('DEMO_LOGIN_PHONE')) define('DEMO_LOGIN_PHONE', $vault_demo_login_phone ?? '');
 if (!defined('DEMO_LOGIN_CODE')) define('DEMO_LOGIN_CODE', $vault_demo_login_code ?? '');
 
+// APNs (native iOS push). Set $vault_apns_key_id + $vault_apns_auth_key (the .p8
+// PEM contents) to enable; sending is a no-op until then. Team/bundle default to
+// the app's known values. Use sandbox for TestFlight/dev builds.
+if (!defined('APNS_KEY_ID'))     define('APNS_KEY_ID', $vault_apns_key_id ?? '');
+if (!defined('APNS_TEAM_ID'))    define('APNS_TEAM_ID', $vault_apns_team_id ?? 'WSR4HM3CH7');
+if (!defined('APNS_BUNDLE_ID'))  define('APNS_BUNDLE_ID', $vault_apns_bundle_id ?? 'com.peoplestar.silentbidpro');
+if (!defined('APNS_AUTH_KEY'))   define('APNS_AUTH_KEY', $vault_apns_auth_key ?? '');   // .p8 PEM contents
+if (!defined('APNS_USE_SANDBOX')) define('APNS_USE_SANDBOX', $vault_apns_use_sandbox ?? false);
+
 // ============================================================
 // TWILIO CONFIGURATION
 // ============================================================
