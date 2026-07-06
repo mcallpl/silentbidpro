@@ -29,9 +29,11 @@ $code = $input['code'] ?? '';
 $full_name = $input['full_name'] ?? '';
 $email = trim($input['email'] ?? '');
 
-if (empty($phone) || empty($code) || empty($full_name)) {
+// A name is only required to CREATE an account — a returning bidder can sign in
+// without re-typing it (enforced after we know the phone, below).
+if (empty($phone) || empty($code)) {
     http_response_code(400);
-    die(json_encode(['status' => 'error', 'message' => 'Phone, name, and code are required']));
+    die(json_encode(['status' => 'error', 'message' => 'Phone and code are required']));
 }
 
 if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -58,6 +60,18 @@ if (!$is_demo_login && !verifyCode($normalized_phone, $code)) {
     die(json_encode([
         'status' => 'error',
         'message' => 'Invalid or expired verification code'
+    ]));
+}
+
+// New bidders must provide a name; returning bidders don't (getOrCreateUser keeps
+// their existing name when none is sent, so signing back in never blanks it).
+$existing_user = dbGetRow("SELECT id FROM users WHERE phone_number = ?", [$normalized_phone]);
+if (!$existing_user && empty(trim($full_name))) {
+    http_response_code(400);
+    die(json_encode([
+        'status' => 'error',
+        'code' => 'name_required',
+        'message' => 'Please enter your name to finish creating your account.'
     ]));
 }
 
