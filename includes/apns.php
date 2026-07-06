@@ -71,7 +71,7 @@ function sendApnsToUser($user_id, string $title, string $body, array $data = [])
     if (!apnsConfigured() || !dbTableExists('device_tokens')) return;
 
     $tokens = dbGetAll(
-        "SELECT id, token FROM device_tokens WHERE user_id = ? AND is_active = 1 AND platform = 'ios'",
+        "SELECT id, token, environment FROM device_tokens WHERE user_id = ? AND is_active = 1 AND platform = 'ios'",
         [(int)$user_id]
     );
     if (!$tokens) return;
@@ -79,14 +79,17 @@ function sendApnsToUser($user_id, string $title, string $body, array $data = [])
     $jwt = apnsProviderToken();
     if (!$jwt) return;
 
-    $host = (defined('APNS_USE_SANDBOX') && APNS_USE_SANDBOX)
-        ? 'api.sandbox.push.apple.com' : 'api.push.apple.com';
+    // A global override forces one host; otherwise pick per token (sandbox tokens
+    // from dev/Xcode builds vs production tokens from TestFlight/App Store).
+    $forceSandbox = defined('APNS_USE_SANDBOX') && APNS_USE_SANDBOX;
     $payload = json_encode(array_merge(
         ['aps' => ['alert' => ['title' => $title, 'body' => $body], 'sound' => 'default']],
         $data
     ));
 
     foreach ($tokens as $t) {
+        $host = ($forceSandbox || ($t['environment'] ?? 'production') === 'sandbox')
+            ? 'api.sandbox.push.apple.com' : 'api.push.apple.com';
         $ch = curl_init("https://{$host}/3/device/{$t['token']}");
         curl_setopt_array($ch, [
             CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_2_0,
