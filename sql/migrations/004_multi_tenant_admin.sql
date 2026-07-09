@@ -66,15 +66,72 @@ CREATE TABLE IF NOT EXISTS event_settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add multi-tenant columns to users table
-ALTER TABLE users ADD COLUMN IF NOT EXISTS event_id INT UNSIGNED DEFAULT NULL;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS user_type ENUM('bidder', 'admin', 'viewer') DEFAULT 'bidder';
-ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by_admin_id INT UNSIGNED DEFAULT NULL;
+-- (MySQL 8 rejects ADD/DROP COLUMN IF [NOT] EXISTS, so guard via information_schema instead)
+DELIMITER $$
+DROP PROCEDURE IF EXISTS _migration_004_apply $$
+CREATE PROCEDURE _migration_004_apply()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'event_id'
+    ) THEN
+        ALTER TABLE users ADD COLUMN event_id INT UNSIGNED DEFAULT NULL;
+    END IF;
 
--- Add foreign key constraints (if they don't exist)
-ALTER TABLE users ADD FOREIGN KEY IF NOT EXISTS (event_id) REFERENCES events(id) ON DELETE SET NULL;
-ALTER TABLE users ADD FOREIGN KEY IF NOT EXISTS (created_by_admin_id) REFERENCES admin_accounts(id) ON DELETE SET NULL;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'user_type'
+    ) THEN
+        ALTER TABLE users ADD COLUMN user_type ENUM('bidder', 'admin', 'viewer') DEFAULT 'bidder';
+    END IF;
 
--- Add indexes for new columns
-ALTER TABLE users ADD INDEX IF NOT EXISTS idx_event_id (event_id);
-ALTER TABLE users ADD INDEX IF NOT EXISTS idx_user_type (user_type);
-ALTER TABLE users ADD INDEX IF NOT EXISTS idx_created_by_admin (created_by_admin_id);
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'created_by_admin_id'
+    ) THEN
+        ALTER TABLE users ADD COLUMN created_by_admin_id INT UNSIGNED DEFAULT NULL;
+    END IF;
+
+    -- Add foreign key constraints (if they don't exist)
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'event_id'
+          AND REFERENCED_TABLE_NAME = 'events'
+    ) THEN
+        ALTER TABLE users ADD FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'created_by_admin_id'
+          AND REFERENCED_TABLE_NAME = 'admin_accounts'
+    ) THEN
+        ALTER TABLE users ADD FOREIGN KEY (created_by_admin_id) REFERENCES admin_accounts(id) ON DELETE SET NULL;
+    END IF;
+
+    -- Add indexes for new columns
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_event_id'
+    ) THEN
+        ALTER TABLE users ADD INDEX idx_event_id (event_id);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_user_type'
+    ) THEN
+        ALTER TABLE users ADD INDEX idx_user_type (user_type);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_created_by_admin'
+    ) THEN
+        ALTER TABLE users ADD INDEX idx_created_by_admin (created_by_admin_id);
+    END IF;
+END $$
+DELIMITER ;
+
+CALL _migration_004_apply();
+DROP PROCEDURE IF EXISTS _migration_004_apply;
