@@ -65,30 +65,10 @@ CREATE TABLE IF NOT EXISTS event_settings (
     INDEX idx_event_id (event_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add multi-tenant columns to users table.
--- MySQL 8 rejects "ADD COLUMN IF NOT EXISTS" (MariaDB-only); guard each column
--- with an information_schema check via PREPARE/EXECUTE so this works on both
--- engines without requiring CREATE ROUTINE privileges.
-SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'event_id');
-SET @sql = IF(@col_exists = 0, 'ALTER TABLE users ADD COLUMN event_id INT UNSIGNED DEFAULT NULL', 'SELECT 1');
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'user_type');
-SET @sql = IF(@col_exists = 0, "ALTER TABLE users ADD COLUMN user_type ENUM('bidder', 'admin', 'viewer') DEFAULT 'bidder'", 'SELECT 1');
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'created_by_admin_id');
-SET @sql = IF(@col_exists = 0, 'ALTER TABLE users ADD COLUMN created_by_admin_id INT UNSIGNED DEFAULT NULL', 'SELECT 1');
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+-- Add multi-tenant columns to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS event_id INT UNSIGNED DEFAULT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS user_type ENUM('bidder', 'admin', 'viewer') DEFAULT 'bidder';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by_admin_id INT UNSIGNED DEFAULT NULL;
 
 -- Add foreign key constraints (if they don't exist)
 ALTER TABLE users ADD FOREIGN KEY IF NOT EXISTS (event_id) REFERENCES events(id) ON DELETE SET NULL;
