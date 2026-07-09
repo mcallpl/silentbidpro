@@ -66,6 +66,10 @@ function renderPageMeta($options = []) {
     <link rel="apple-touch-icon" href="images/brand/apple-touch-icon.png">
     <link rel="manifest" href="site.webmanifest">
     <meta name="theme-color" content="#172235">
+    <?php // iOS Smart App Banner — Safari shows a native install/open strip on
+          // every page once the App Store listing resolves (Silent Bid Pro,
+          // App Store id 6787838881). Harmlessly inert everywhere else. ?>
+    <meta name="apple-itunes-app" content="app-id=6787838881">
     <?php foreach ($stylesheets as $stylesheet): ?>
         <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrlWithVersion($stylesheet)); ?>">
     <?php endforeach; ?>

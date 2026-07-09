@@ -56,6 +56,12 @@ $branding = getBrandingData();
                     <a class="landing-btn landing-btn-primary" href="items.php">Open Auction App</a>
                     <a class="landing-btn landing-btn-secondary" href="bid.php">Bidder Sign In</a>
                     <a class="landing-btn landing-btn-quiet" href="admin.php">Admin Console</a>
+                    <!-- Revealed by the app-store availability check at the foot of the page -->
+                    <a class="app-store-badge" data-appstore-badge hidden
+                       href="https://apps.apple.com/us/app/id6787838881"
+                       aria-label="Download Silent Bid Pro on the App Store">
+                        <img src="images/brand/app-store-badge.svg" alt="Download on the App Store" height="52">
+                    </a>
                 </div>
             </div>
             <div class="landing-hero-proof" aria-label="Platform highlights">
@@ -127,9 +133,33 @@ $branding = getBrandingData();
                 <a class="landing-btn landing-btn-primary" href="items.php">Open Auction App</a>
                 <a class="landing-btn landing-btn-secondary" href="bid.php">Bidder Sign In</a>
                 <a class="landing-btn landing-btn-quiet" href="admin.php">Admin Console</a>
+                <a class="app-store-badge" data-appstore-badge hidden
+                   href="https://apps.apple.com/us/app/id6787838881"
+                   aria-label="Download Silent Bid Pro on the App Store">
+                    <img src="images/brand/app-store-badge.svg" alt="Download on the App Store" height="52">
+                </a>
             </div>
         </section>
     </main>
+
+    <script>
+    // Reveal the App Store badges only once the listing is actually live in
+    // Apple's catalog (JSONP against the public iTunes Lookup API), so the
+    // homepage never shows a dead store link while propagation completes.
+    function sbpAppStoreCheck(data) {
+        if (data && data.resultCount > 0) {
+            document.querySelectorAll('[data-appstore-badge]').forEach(function (el) {
+                el.hidden = false;
+            });
+        }
+    }
+    (function () {
+        var s = document.createElement('script');
+        s.src = 'https://itunes.apple.com/lookup?id=6787838881&country=us&callback=sbpAppStoreCheck';
+        s.async = true;
+        document.body.appendChild(s);
+    })();
+    </script>
 
     <footer class="landing-footer">
         <span><?php echo htmlspecialchars(APP_NAME); ?></span>
