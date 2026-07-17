@@ -638,7 +638,7 @@ function notifyBidPlaced($item_id, $new_bidder_id, $previous_bidder_id, $item_ti
  * @param string $checkout_url Optional checkout URL for SMS
  * @return array Delivery results with status
  */
-function notifyWinner($item_id, $winner_id, $item_title, $winning_amount, $checkout_url = '') {
+function notifyWinner($item_id, $winner_id, $item_title, $winning_amount, $checkout_url = '', $auto_charge = false) {
     $delivery_results = [
         'push_sent' => false,
         'sms_sent' => false,
@@ -654,18 +654,25 @@ function notifyWinner($item_id, $winner_id, $item_title, $winning_amount, $check
         return $delivery_results;
     }
 
+    // With a card on file the winner has nothing to do — say so instead of
+    // sending a payment link.
+    $push_body = $auto_charge
+        ? "You won '{$item_title}' for " . formatCurrency($winning_amount) . '. Your saved card will be charged automatically — no action needed.'
+        : "You won '{$item_title}' for " . formatCurrency($winning_amount) . '. Tap to complete payment.';
+
     // Native iOS push (APNs) — no-op until the .p8 key is configured.
-    sendApnsToUser($winner_id, 'You won! 🎉',
-        "You won '{$item_title}' for " . formatCurrency($winning_amount) . '. Tap to complete payment.',
-        ['item_id' => (int)$item_id, 'action' => 'checkout']);
+    sendApnsToUser($winner_id, 'You won! 🎉', $push_body,
+        ['item_id' => (int)$item_id, 'action' => $auto_charge ? 'won' : 'checkout']);
 
     // Send push notification
     $push_results = sendPushNotifications($winner_id, [
         'title' => 'You won!',
-        'body' => "Congratulations! You won '{$item_title}' for " . formatCurrency($winning_amount),
+        'body' => $auto_charge
+            ? "Congratulations! You won '{$item_title}' for " . formatCurrency($winning_amount) . ' — your saved card will be charged automatically.'
+            : "Congratulations! You won '{$item_title}' for " . formatCurrency($winning_amount),
         'icon' => '/images/sbb-icon-192.png',
         'badge' => '/images/sbb-badge-72.png',
-        'data' => ['item_id' => $item_id, 'action' => 'checkout']
+        'data' => ['item_id' => $item_id, 'action' => $auto_charge ? 'won' : 'checkout']
     ]);
 
     if (!empty($push_results)) {
@@ -696,12 +703,18 @@ function notifyWinner($item_id, $winner_id, $item_title, $winning_amount, $check
     if ($should_send_sms && !empty($winner['phone_number'])) {
         $settings = $event_id ? getEventSettings($event_id) : null;
 
-        if (!$checkout_url) {
+        if (!$checkout_url && !$auto_charge) {
             $checkout_url = rtrim(PUBLIC_SITE_URL, '/') . "/checkout.php?item_id={$item_id}";
         }
 
         $sms_result = null;
-        if ($settings && !empty($settings['winner_sms_template'])) {
+        if ($auto_charge) {
+            // Card on file: no link, no template — nothing for them to do.
+            $message = "🎉 You won '{$item_title}' for " . formatCurrency($winning_amount)
+                . '! Your saved card will be charged automatically when the auction wraps up — no action needed. '
+                . 'Details: ' . rtrim(PUBLIC_SITE_URL, '/') . '/my-bids.php';
+            $sms_result = sendTwilioSMS($winner['phone_number'], $message, (int)$winner['id']);
+        } elseif ($settings && !empty($settings['winner_sms_template'])) {
             $message = formatSMSMessage($settings['winner_sms_template'], '', [
                 'TITLE' => $item_title,
                 'AMOUNT' => formatCurrency($winning_amount),

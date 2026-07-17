@@ -373,9 +373,49 @@ SBB.Utils = {
     }
 };
 
+// ============================================================
+// Item sharing (Web Share API with copy-link fallback)
+// ============================================================
+SBB.Share = {
+    init() {
+        document.querySelectorAll('.js-share-item').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const url = btn.dataset.shareUrl || window.location.href;
+                const title = btn.dataset.shareTitle || document.title;
+                const text = 'Check out "' + title + '" in this silent auction — every bid supports the cause!';
+                if (navigator.share) {
+                    try {
+                        await navigator.share({ title, text, url });
+                        return;
+                    } catch (err) {
+                        if (err && err.name === 'AbortError') return; // user cancelled
+                    }
+                }
+                try {
+                    await navigator.clipboard.writeText(url);
+                    SBB.UI.showNotice('Link copied — paste it anywhere to share!');
+                } catch (err) {
+                    window.prompt('Copy this link to share:', url);
+                }
+            });
+        });
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     if (window.SBB && window.SBB.UI) {
         window.SBB.UI.init();
+    }
+
+    if (window.SBB && window.SBB.Share) {
+        window.SBB.Share.init();
+    }
+
+    // Returning from Stripe card setup: confirm and clean the URL.
+    if (/[?&]card_saved=1/.test(window.location.search)) {
+        SBB.UI.showNotice('✅ Card saved — you\'re all set to bid! You\'ll only be charged if you win.');
+        const clean = window.location.href.replace(/([?&])card_saved=1(&|$)/, (m, p1, p2) => (p2 === '&' ? p1 : ''));
+        window.history.replaceState({}, '', clean);
     }
 
     // Initialize push notifications if user is authenticated

@@ -28,6 +28,41 @@ if (!$input) {
     die(json_encode(['status' => 'error', 'message' => 'Invalid JSON']));
 }
 
+// COMBINED MODE: one Stripe session covering every unpaid won item in an
+// event (the "pay for everything at once" path).
+if (!empty($input['all'])) {
+    $event_id = (int)($input['event_id'] ?? 0);
+    if (!$event_id) {
+        // Infer: the (single) event where this user has unpaid won items.
+        $event_id = (int)dbGetValue(
+            "SELECT i.event_id
+             FROM transactions t JOIN items i ON i.id = t.item_id
+             WHERE t.user_id = ? AND t.status = 'pending'
+               AND i.is_closed = 1 AND i.current_high_bidder_id = t.user_id
+             ORDER BY t.id DESC LIMIT 1",
+            [(int)$user['id']]
+        );
+    }
+    if (!$event_id) {
+        http_response_code(404);
+        die(json_encode(['status' => 'error', 'message' => 'Nothing awaiting payment']));
+    }
+
+    $result = createCombinedCheckoutSession((int)$user['id'], $event_id);
+    if (empty($result['success'])) {
+        http_response_code(500);
+        die(json_encode(['status' => 'error', 'message' => $result['error'] ?? 'Checkout failed']));
+    }
+    http_response_code(200);
+    die(json_encode([
+        'status' => 'ok',
+        'session_id' => $result['session_id'],
+        'public_key' => $result['public_key'],
+        'item_count' => $result['item_count'],
+        'total' => $result['total']
+    ]));
+}
+
 $item_id = (int)($input['item_id'] ?? 0);
 if (!$item_id) {
     http_response_code(400);

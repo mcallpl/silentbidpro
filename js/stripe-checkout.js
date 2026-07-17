@@ -15,10 +15,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         checkoutError.style.display = 'none';
 
         try {
-            // Create checkout session
-            const sessionResponse = await SBB.API.post('/api/checkout/create-session.php', {
-                item_id: window.SBB.itemId
-            });
+            // Create checkout session — either one item, or ALL unpaid won
+            // items in the event as a single combined payment.
+            const payload = window.SBB.combinedCheckout
+                ? { all: true, event_id: window.SBB.eventId || 0 }
+                : { item_id: window.SBB.itemId };
+            const sessionResponse = await SBB.API.post('/api/checkout/create-session.php', payload);
 
             if (!sessionResponse.session_id) {
                 throw new Error(sessionResponse.message || sessionResponse.error || 'Failed to create checkout session');

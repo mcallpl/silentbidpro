@@ -114,6 +114,8 @@ $summary = [
     'watching' => count($watched_items)
 ];
 
+$test_charge_mode = defined('TEST_CHARGE_DOLLAR') && TEST_CHARGE_DOLLAR;
+$unpaid_total = 0.0;
 foreach ($bid_items as $item) {
     $is_winner = (int)$item['current_high_bidder_id'] === (int)$user['id'];
     $is_closed = (int)$item['is_closed'] === 1 || (int)$item['time_remaining'] <= 0;
@@ -121,6 +123,7 @@ foreach ($bid_items as $item) {
 
     if ($is_closed && $is_winner && !$is_paid) {
         $summary['won_unpaid']++;
+        $unpaid_total += $test_charge_mode ? 1.00 : (float)$item['current_high_bid'];
     } elseif ($is_closed && $is_winner && $is_paid) {
         $summary['paid']++;
     } elseif (!$is_closed && $is_winner) {
@@ -221,6 +224,23 @@ $page_title = 'My Bids - ' . APP_NAME;
         <div style="padding: 0.5rem 0; text-align: center; color: var(--color-medium); font-size: 0.9rem;">
             Welcome back, <?php echo htmlspecialchars($user['full_name'] ?: 'friend'); ?>
         </div>
+
+        <?php if ($summary['won_unpaid'] > 0): ?>
+            <!-- PROMINENT payment call-to-action: one tap pays for everything won. -->
+            <section class="pay-now-banner" aria-label="Payment due">
+                <div class="pay-now-text">
+                    <strong>🎉 You won <?php echo $summary['won_unpaid']; ?> item<?php echo $summary['won_unpaid'] === 1 ? '' : 's'; ?>!</strong>
+                    <span>Total due: $<?php echo number_format($unpaid_total, 2); ?> — pay for everything in one step.</span>
+                </div>
+                <a href="checkout.php?all=1<?php echo $event ? '&event=' . (int)$event['id'] : ''; ?>" class="btn btn-pay-now">💳 Pay Here</a>
+            </section>
+        <?php elseif ($summary['paid'] > 0): ?>
+            <?php require_once __DIR__ . '/includes/fulfillment.php'; ?>
+            <section class="pickup-info-banner" aria-label="Pickup information">
+                <strong>✅ You're all paid up — here's what happens next:</strong>
+                <p><?php echo nl2br(htmlspecialchars(getPickupInstructions($event ? (int)$event['id'] : 0))); ?></p>
+            </section>
+        <?php endif; ?>
 
         <section class="bid-summary-grid" aria-label="Bid summary">
             <div class="bid-summary-card">

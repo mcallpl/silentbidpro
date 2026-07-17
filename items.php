@@ -113,12 +113,44 @@ $page_title = $event_name . ' - ' . APP_NAME;
             </section>
         <?php endif; ?>
 
+        <?php
+        // PROMINENT payment call-to-action: winners with unpaid items see it
+        // on the main browse page, not just buried in My Bids.
+        $unpaid = ['n' => 0, 'total' => 0.0];
+        if ($is_authenticated && $event) {
+            $test_charge_mode = defined('TEST_CHARGE_DOLLAR') && TEST_CHARGE_DOLLAR;
+            $unpaid_rows = dbGetAll(
+                "SELECT t.amount FROM transactions t
+                 JOIN items i ON i.id = t.item_id
+                 WHERE t.user_id = ? AND t.status = 'pending'
+                   AND i.event_id = ? AND i.is_closed = 1 AND i.current_high_bidder_id = t.user_id",
+                [(int)$user['id'], (int)$event['id']]
+            );
+            foreach ($unpaid_rows as $r) {
+                $unpaid['n']++;
+                $unpaid['total'] += $test_charge_mode ? 1.00 : (float)$r['amount'];
+            }
+        }
+        ?>
+        <?php if ($unpaid['n'] > 0): ?>
+            <section class="pay-now-banner" aria-label="Payment due">
+                <div class="pay-now-text">
+                    <strong>🎉 You won <?php echo $unpaid['n']; ?> item<?php echo $unpaid['n'] === 1 ? '' : 's'; ?>!</strong>
+                    <span>Total due: $<?php echo number_format($unpaid['total'], 2); ?> — pay for everything in one step.</span>
+                </div>
+                <a href="checkout.php?all=1&event=<?php echo (int)$event['id']; ?>" class="btn btn-pay-now">💳 Pay Here</a>
+            </section>
+        <?php endif; ?>
+
         <!-- Browse Actions -->
         <div class="event-actions" style="padding: 1rem 0; text-align: center;">
             <?php if ($is_authenticated): ?>
                 <a href="my-bids.php" class="btn btn-secondary">My Bids</a>
             <?php else: ?>
                 <a href="bid.php?return=<?php echo urlencode('items.php'); ?>" class="btn btn-primary">Sign In to Bid</a>
+            <?php endif; ?>
+            <?php if ($event && (int)($event['donations_enabled'] ?? 1) === 1): ?>
+                <a href="donate.php?event=<?php echo (int)$event['id']; ?>" class="btn btn-donate">💝 Donate Now</a>
             <?php endif; ?>
         </div>
 
@@ -260,6 +292,11 @@ $page_title = $event_name . ' - ' . APP_NAME;
                                             Watch
                                         </a>
                                     <?php endif; ?>
+                                    <button type="button" class="btn btn-secondary btn-share js-share-item"
+                                            data-share-url="<?php echo htmlspecialchars(rtrim(APP_DOMAIN, '/') . '/item.php?id=' . (int)$item['item_number'] . (!empty($event['slug']) ? '&event=' . rawurlencode($event['slug']) : '')); ?>"
+                                            data-share-title="<?php echo htmlspecialchars($item['title']); ?>">
+                                        ↗ Share
+                                    </button>
                                 </div>
                             </div>
                         </div>

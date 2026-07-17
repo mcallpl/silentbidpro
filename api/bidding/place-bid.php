@@ -43,6 +43,9 @@ if (!$input) {
 $item_id = $input['item_id'] ?? 0;
 $bid_amount = (float)($input['bid_amount'] ?? 0);
 $max_bid_amount = !empty($input['max_bid_amount']) ? (float)$input['max_bid_amount'] : null;
+// Buy It Now must be an EXPLICIT client intent. A regular bid that merely
+// meets the buy-now price is never silently converted into a purchase.
+$is_buy_now = !empty($input['buy_now']);
 
 if (!$item_id || $bid_amount <= 0) {
     http_response_code(400);
@@ -61,12 +64,26 @@ if ($pinned_event_id) {
     }
 }
 
+// CARD ON FILE: events can require a saved card before the first bid. This
+// legitimizes bids and lets winners be charged automatically at close. The
+// demo/App-Review account is exempt (see isDemoUser).
+require_once __DIR__ . '/../../includes/card-on-file.php';
+$gate_event_id = (int)dbGetValue("SELECT event_id FROM items WHERE id = ?", [(int)$item_id]);
+if (cardRequiredButMissing($user, $gate_event_id)) {
+    http_response_code(402);
+    die(json_encode([
+        'status' => 'error',
+        'code' => 'card_required',
+        'message' => 'Add a card to place your first bid. You will only be charged if you win.'
+    ]));
+}
+
 // Log attempt
 error_log('[BID] User ' . $user['id'] . ' attempting bid of $' . $bid_amount . ' on item ' . $item_id);
 
 // Place bid with transaction locking to prevent race conditions
 try {
-    $result = placeBidWithLocking($item_id, $user['id'], $bid_amount, $max_bid_amount);
+    $result = placeBidWithLocking($item_id, $user['id'], $bid_amount, $max_bid_amount, $is_buy_now);
 } catch (Exception $e) {
     error_log('[BID] ❌ Transaction failed: ' . $e->getMessage());
     http_response_code(500);
@@ -97,7 +114,8 @@ if (!empty($result['buy_now'])) {
             (int)$user['id'],
             (float)$result['new_high_bid'],
             $bn_item['title'] ?? 'Item',
-            $user['phone_number'] ?? ''
+            $user['phone_number'] ?? '',
+            'buy_now'
         );
     } catch (\Throwable $e) {
         error_log('[BID] Buy-now winner processing failed (purchase still stands): ' . $e->getMessage());

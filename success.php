@@ -13,20 +13,23 @@ require_once __DIR__ . '/includes/public-nav.php';
 $session_id = $_GET['session_id'] ?? '';
 $user = getCurrentUser();
 
-// Fetch transaction by session ID (including owner for the authorization check)
-$transaction = dbGetRow(
-    "SELECT t.id, t.user_id, t.item_id, t.amount, t.status, i.title
+// Fetch ALL transactions on this session — a combined checkout pays for
+// several items with one Stripe session.
+$transactions = dbGetAll(
+    "SELECT t.id, t.user_id, t.item_id, t.amount, t.status, i.title, i.event_id
      FROM transactions t
      JOIN items i ON i.id = t.item_id
-     WHERE t.stripe_checkout_session_id = ?",
+     WHERE t.stripe_checkout_session_id = ?
+     ORDER BY t.id ASC",
     [$session_id]
 );
 
 // Only the owning user may view their payment record — don't leak another
 // bidder's item/amount to anyone who obtains a session_id.
-if ($transaction && (!$user || (int)$transaction['user_id'] !== (int)$user['id'])) {
-    $transaction = null;
+if ($transactions && (!$user || (int)$transactions[0]['user_id'] !== (int)$user['id'])) {
+    $transactions = [];
 }
+$transaction = $transactions[0] ?? null;
 
 if (!$transaction) {
     renderPublicMessagePage([
@@ -43,6 +46,15 @@ if (!$transaction) {
 }
 
 $page_title = 'Payment Successful - ' . APP_NAME;
+
+$total_amount = 0.0;
+foreach ($transactions as $t) {
+    $total_amount += (float)$t['amount'];
+}
+
+// Event-specific pickup/delivery instructions (with a generic default).
+require_once __DIR__ . '/includes/fulfillment.php';
+$pickup_text = getPickupInstructions((int)($transaction['event_id'] ?? 0));
 
 // The webhook may not have landed yet (status 'pending'), or the payment may
 // have actually failed — don't claim success unconditionally.
@@ -83,8 +95,13 @@ if ($is_paid) {
             <p class="success-text"><?php echo htmlspecialchars($success_text); ?></p>
 
             <div class="success-details">
-                <h3><?php echo htmlspecialchars($transaction['title']); ?></h3>
-                <p class="amount">$<?php echo number_format($transaction['amount'], 2); ?></p>
+                <?php foreach ($transactions as $t): ?>
+                    <div class="summary-item">
+                        <span class="item-name"><?php echo htmlspecialchars($t['title']); ?></span>
+                        <span class="item-amount">$<?php echo number_format($t['amount'], 2); ?></span>
+                    </div>
+                <?php endforeach; ?>
+                <p class="amount">Total: $<?php echo number_format($total_amount, 2); ?></p>
                 <p class="status">
                     Status: <span class="badge <?php echo $status_badge_class; ?>">
                         <?php echo ucfirst($transaction['status']); ?>
@@ -93,12 +110,8 @@ if ($is_paid) {
             </div>
 
             <div class="next-steps">
-                <h3>What's Next?</h3>
-                <ol>
-                    <li>Watch for SMS updates about your item</li>
-                    <li>Arrange pickup or delivery with the nonprofit</li>
-                    <li>Enjoy knowing your donation supports a great cause!</li>
-                </ol>
+                <h3>📦 Getting Your Item<?php echo count($transactions) === 1 ? '' : 's'; ?></h3>
+                <p class="pickup-instructions"><?php echo nl2br(htmlspecialchars($pickup_text)); ?></p>
             </div>
 
             <div class="action-buttons">

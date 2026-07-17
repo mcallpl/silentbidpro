@@ -65,6 +65,14 @@ switch ($event_type) {
         }
         break;
 
+    case 'payment_intent.succeeded':
+        // Backup path for off-session auto-charges (normally marked paid
+        // synchronously by the auction closer). Idempotent.
+        processPaymentIntentSucceeded($event['data']['object'] ?? []);
+        http_response_code(200);
+        echo json_encode(['status' => 'ok', 'message' => 'Payment intent recorded']);
+        break;
+
     case 'charge.failed':
     case 'payment_intent.payment_failed':
         $obj = $event['data']['object'] ?? [];

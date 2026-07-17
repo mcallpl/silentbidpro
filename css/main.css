@@ -2572,3 +2572,115 @@ body:not(.landing-page) {
         animation: none;
     }
 }
+
+/* ============================================================
+   2026-07-16 meeting fixes: pay banner, buy-now confirm,
+   share, donate, pickup instructions
+   ============================================================ */
+
+/* Prominent "Pay Here" banner (items + my-bids) */
+.pay-now-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, var(--color-success), #1d5c48);
+    border-radius: 12px;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(40, 120, 95, 0.35);
+}
+.pay-now-banner .pay-now-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+.pay-now-banner .pay-now-text strong { font-size: 1.05rem; }
+.pay-now-banner .pay-now-text span { opacity: 0.92; font-size: 0.95rem; }
+.btn-pay-now {
+    background: #fff;
+    color: var(--color-success);
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    border: none;
+    white-space: nowrap;
+    animation: payPulse 2s ease-in-out infinite;
+}
+.btn-pay-now:hover { color: #1d5c48; transform: translateY(-1px); }
+@keyframes payPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); }
+    50% { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .btn-pay-now { animation: none; }
+}
+
+/* Post-payment pickup instructions */
+.pickup-info-banner {
+    margin: 1rem 0;
+    padding: 1rem 1.25rem;
+    background: rgba(40, 120, 95, 0.08);
+    border: 1px solid rgba(40, 120, 95, 0.25);
+    border-radius: 12px;
+}
+.pickup-info-banner p,
+.pickup-instructions {
+    margin-top: 0.5rem;
+    color: var(--color-medium);
+    line-height: 1.55;
+    text-align: left;
+    white-space: normal;
+}
+
+/* Buy It Now confirmation */
+.buy-now-warning {
+    margin: 0.75rem 0;
+    padding: 0.85rem 1rem;
+    background: #fff4e5;
+    border: 1px solid #f0b429;
+    border-radius: 10px;
+    color: #7a4d05;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    text-align: left;
+}
+.btn-buy-now-confirm {
+    background: var(--color-accent) !important;
+    color: #fff !important;
+    font-weight: 700;
+}
+
+/* Share buttons */
+.btn-share { white-space: nowrap; }
+
+/* Donate */
+.btn-donate {
+    background: linear-gradient(135deg, #c2417e, #8e2c5c);
+    color: #fff;
+    border: none;
+    font-weight: 600;
+}
+.btn-donate:hover { color: #fff; transform: translateY(-1px); }
+.donate-container .donate-form-section {
+    max-width: 480px;
+    margin: 1.5rem auto;
+    text-align: center;
+}
+.donate-lead { color: var(--color-medium); margin: 0.5rem 0 1.25rem; }
+.donate-amounts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.donate-preset.is-active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+.donate-custom { margin-bottom: 1.25rem; }
+#donateBtn { width: 100%; }

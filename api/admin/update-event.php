@@ -99,12 +99,32 @@ if ($status === 'open') {
     }
 }
 
+// Optional per-event behavior switches + fulfillment text (migration 011).
+// Only touched when present in the payload so older admin UIs keep working.
+$extra_sets = '';
+$extra_params = [];
+foreach (['require_card_on_bid', 'auto_charge_on_close', 'donations_enabled'] as $flag) {
+    if (array_key_exists($flag, $input)) {
+        $extra_sets .= ", {$flag} = ?";
+        $extra_params[] = !empty($input[$flag]) ? 1 : 0;
+    }
+}
+if (array_key_exists('pickup_instructions', $input)) {
+    $extra_sets .= ", pickup_instructions = ?";
+    $pi = trim((string)$input['pickup_instructions']);
+    $extra_params[] = $pi === '' ? null : $pi;
+}
+
 // Update event
 $success = dbUpdate(
     "UPDATE events SET name = ?, status = ?, event_date = ?, auction_start_time = ?,
-            auction_end_time = ?, payment_mode = ?, timezone = ?, updated_at = NOW()
+            auction_end_time = ?, payment_mode = ?, timezone = ?{$extra_sets}, updated_at = NOW()
      WHERE id = ?",
-    [$name, $status, $event_date, $auction_start_time, $auction_end_time, $payment_mode, $timezone, (int)$event_id]
+    array_merge(
+        [$name, $status, $event_date, $auction_start_time, $auction_end_time, $payment_mode, $timezone],
+        $extra_params,
+        [(int)$event_id]
+    )
 );
 
 if (!$success) {

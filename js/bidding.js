@@ -195,11 +195,17 @@ SBB.Bidding = {
     // stale (too-low) bid the server then rejected — and a Buy It Now by someone
     // else left this bidder's UI fully open.
     syncItemStateFromFeed(response) {
+        // The server's next_minimum is authoritative — the Quick Bid button must
+        // always show exactly what the server will accept, never local arithmetic.
+        const serverMin = parseFloat(response.next_minimum);
+        if (!isNaN(serverMin) && serverMin > 0) {
+            window.SBB.nextMinimum = serverMin;
+        }
         const high = parseFloat(response.current_high_bid);
         if (!isNaN(high) && high > 0 && high !== window.SBB.currentHighBid) {
             window.SBB.currentHighBid = high;
-            window.SBB.hasBids = true;
-            const nextMin = high + window.SBB.minIncrement;
+            window.SBB.hasBids = response.has_bids !== undefined ? !!response.has_bids : true;
+            const nextMin = !isNaN(serverMin) && serverMin > 0 ? serverMin : high + window.SBB.minIncrement;
             const currentBidAmount = document.querySelector('.current-bid-amount');
             if (currentBidAmount) currentBidAmount.textContent = SBB.Utils.formatCurrency(high);
             const qb = document.querySelector('.quick-bid-amount');
@@ -249,9 +255,13 @@ SBB.Bidding = {
     },
 
     quickBid() {
-        const nextMinimum = window.SBB.hasBids && window.SBB.currentHighBid > 0
-            ? window.SBB.currentHighBid + window.SBB.minIncrement
-            : window.SBB.startingBid;
+        // Prefer the server-provided minimum (kept fresh by the 2s feed poll and
+        // by bid responses); fall back to local math only if it never arrived.
+        const nextMinimum = (typeof window.SBB.nextMinimum === 'number' && window.SBB.nextMinimum > 0)
+            ? window.SBB.nextMinimum
+            : (window.SBB.hasBids && window.SBB.currentHighBid > 0
+                ? window.SBB.currentHighBid + window.SBB.minIncrement
+                : window.SBB.startingBid);
 
         this.showBidModal(nextMinimum);
     },
@@ -285,12 +295,24 @@ SBB.Bidding = {
         this.pendingBid = { amount, maxBid, isBuyNow };
         document.getElementById('modalBidAmount').textContent = SBB.Utils.formatCurrency(amount);
         const modal = document.getElementById('bidModal');
-        // Reflect the buy-now intent in the confirm button label, if present.
+
+        // Buy It Now is IRREVERSIBLE (instant win + auction closes) — the modal
+        // must look unmistakably different from an ordinary bid confirmation.
+        const title = document.getElementById('modalTitle');
+        if (title) title.textContent = isBuyNow ? '⚡ Buy It Now — are you sure?' : 'Confirm Your Bid';
+        const lead = document.getElementById('modalBidLead');
+        if (lead) lead.textContent = isBuyNow ? "You're about to BUY this item now for" : "You're about to bid";
+        const warning = document.getElementById('modalBuyNowWarning');
+        if (warning) warning.style.display = isBuyNow ? 'block' : 'none';
+
         const confirmBtn = document.getElementById('confirmBidBtn');
         if (confirmBtn) {
             confirmBtn.dataset.defaultLabel = confirmBtn.dataset.defaultLabel || confirmBtn.textContent;
-            confirmBtn.textContent = isBuyNow ? 'Confirm Purchase' : (confirmBtn.dataset.defaultLabel || 'Confirm Bid');
+            confirmBtn.textContent = isBuyNow ? 'Yes — Buy It Now' : (confirmBtn.dataset.defaultLabel || 'Confirm Bid');
+            confirmBtn.classList.toggle('btn-buy-now-confirm', isBuyNow);
         }
+        const cancelBtn = document.getElementById('cancelBidBtn');
+        if (cancelBtn) cancelBtn.textContent = isBuyNow ? 'No, keep bidding' : 'Cancel';
         modal.style.display = 'block';
     },
 
@@ -317,7 +339,8 @@ SBB.Bidding = {
             const response = await SBB.API.post('/api/bidding/place-bid.php', {
                 item_id: this.itemId,
                 bid_amount: this.pendingBid.amount,
-                max_bid_amount: this.pendingBid.maxBid
+                max_bid_amount: this.pendingBid.maxBid,
+                buy_now: !!this.pendingBid.isBuyNow
             });
 
             console.log('[BID RESPONSE]', response);
@@ -326,12 +349,16 @@ SBB.Bidding = {
                 console.log('[BID SYNC] ✓ Bid placed successfully:', response);
 
                 // Buy It Now closes the auction and wins immediately — reload so the
-                // page reflects the closed/won state and the "Complete Payment" link.
+                // page reflects the closed/won state and the payment status.
                 if (response.buy_now || response.is_closed) {
                     this.closeBidModal();
-                    this.showSuccessNotification('You won this item with Buy It Now! Redirecting to payment…');
+                    this.showSuccessNotification('🎉 You won this item with Buy It Now!');
                     setTimeout(() => window.location.reload(), 1200);
                     return;
+                }
+
+                if (typeof response.next_minimum === 'number') {
+                    window.SBB.nextMinimum = response.next_minimum;
                 }
 
                 // Update UI
@@ -343,15 +370,57 @@ SBB.Bidding = {
 
                 // Show success message
                 this.showSuccessNotification(response.proxy_message || 'Your bid was placed successfully.');
+            } else if (response.code === 'card_required') {
+                // First bid needs a card on file. Send them to Stripe's secure
+                // card-setup page and bring them straight back here.
+                this.closeBidModal();
+                this.showNotification('To place your first bid, add a card — you\'ll only be charged if you win. Taking you to secure card setup…');
+                await this.startCardSetup();
+            } else if (response.code === 'meets_buy_now') {
+                // Their bid amount reaches the Buy It Now price. Never convert
+                // silently — re-open the modal as an explicit buy-now confirm.
+                const price = parseFloat(response.buy_now_price);
+                this.showBidModal(price, null, true);
+            } else if (response.code === 'bid_too_low' && typeof response.next_minimum === 'number') {
+                // Someone bid in the polling gap. Refresh to the fresh server
+                // minimum and re-prompt at the new amount instead of dead-ending.
+                window.SBB.nextMinimum = response.next_minimum;
+                window.SBB.currentHighBid = response.current_high_bid || window.SBB.currentHighBid;
+                const qb = document.querySelector('.quick-bid-amount');
+                if (qb) qb.textContent = SBB.Utils.formatCurrency(response.next_minimum);
+                this.showNotification('The price just went up — new minimum is ' + SBB.Utils.formatCurrency(response.next_minimum) + '.');
+                if (!this.pendingBid.maxBid && !this.pendingBid.isBuyNow) {
+                    this.showBidModal(response.next_minimum);
+                } else {
+                    this.closeBidModal();
+                }
             } else {
                 console.error('[BID SYNC] ❌ Bid placement failed:', response);
+                this.closeBidModal();
                 this.showErrorNotification(response.message || 'Bid failed');
             }
         } catch (err) {
             this.showErrorNotification('Network error. Please try again.');
         } finally {
             confirmBtn.classList.remove('loading');
-            confirmBtn.textContent = 'Confirm Bid';
+            confirmBtn.classList.remove('btn-buy-now-confirm');
+            confirmBtn.textContent = confirmBtn.dataset.defaultLabel || 'Confirm Bid';
+        }
+    },
+
+    // Kick off Stripe Checkout in setup mode to save a card, returning to this
+    // page (with ?card_saved=1) afterwards so the bidder can continue.
+    async startCardSetup() {
+        try {
+            const returnPath = window.location.pathname.replace(/^\//, '') + window.location.search;
+            const response = await SBB.API.post('/api/checkout/setup-card.php', { return_path: returnPath });
+            if (response.status === 'ok' && response.url) {
+                window.location.href = response.url;
+            } else {
+                this.showErrorNotification(response.message || 'Could not start card setup. Please try again.');
+            }
+        } catch (err) {
+            this.showErrorNotification('Network error starting card setup. Please try again.');
         }
     },
 

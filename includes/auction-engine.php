@@ -115,6 +115,36 @@ function closeExpiredAuctions() {
         }
     }
 
+    // AUTO-CHARGE: once an event is fully closed, charge each winner's
+    // saved card ONE combined PaymentIntent for everything they won.
+    // Runs every tick and self-heals — it also picks up events whose
+    // charge failed transiently on a previous run. Events that still
+    // have open items (anti-sniping extensions) are skipped inside.
+    try {
+        require_once __DIR__ . '/card-on-file.php';
+        $charge_events = dbGetAll(
+            "SELECT DISTINCT i.event_id
+             FROM transactions t
+             JOIN items i ON i.id = t.item_id
+             JOIN users u ON u.id = t.user_id
+             WHERE t.status = 'pending'
+               AND t.stripe_checkout_session_id IS NULL
+               AND t.auto_charge_attempts < 3
+               AND u.stripe_payment_method_id IS NOT NULL"
+        );
+        foreach ($charge_events as $ce) {
+            $charge_results = autoChargeEventWinners((int)$ce['event_id']);
+            foreach ($charge_results as $uid => $res) {
+                if (!empty($res['error'])) {
+                    $errors[] = "Auto-charge event {$ce['event_id']} user {$uid}: {$res['error']}";
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        $errors[] = 'Auto-charge sweep failed: ' . $e->getMessage();
+        error_log($errors[count($errors) - 1]);
+    }
+
     return [
         'closed_count' => $closed_count,
         'errors' => $errors
@@ -132,9 +162,10 @@ function closeExpiredAuctions() {
  * @param float $amount Winning bid amount
  * @param string $item_title Item title
  * @param string $phone_number Winner phone number
+ * @param string $context 'close' (cron) or 'buy_now' (instant purchase)
  * @return bool Success/failure
  */
-function processWinner($item_id, $user_id, $amount, $item_title, $phone_number) {
+function processWinner($item_id, $user_id, $amount, $item_title, $phone_number, $context = 'close') {
     $payment_request = ensurePendingPaymentRequest($item_id, $user_id, $amount);
 
     if (!$payment_request['success']) {
@@ -146,7 +177,34 @@ function processWinner($item_id, $user_id, $amount, $item_title, $phone_number) 
         return true;
     }
 
-    // Generate checkout URL
+    // Card on file + auto-charge: winners with a saved card don't get a
+    // "pay now" link — their card is charged automatically (immediately
+    // for Buy It Now, or as one combined charge when the event closes).
+    require_once __DIR__ . '/card-on-file.php';
+    $event_id = (int)dbGetValue("SELECT event_id FROM items WHERE id = ?", [(int)$item_id]);
+    $auto_charge = $event_id
+        && (int)dbGetValue("SELECT auto_charge_on_close FROM events WHERE id = ?", [$event_id]) === 1
+        && userHasSavedCard((int)$user_id);
+
+    if ($auto_charge && $context === 'buy_now') {
+        // Buy It Now is a committed purchase — charge right away.
+        $charge = autoChargeWinner((int)$user_id, $event_id);
+        if (!empty($charge['charged'])) {
+            return true; // receipt SMS already sent by the charger
+        }
+        if (!empty($charge['hard_declined'])) {
+            return true; // pay-link SMS already sent by the charger
+        }
+        // Transient failure: the cron will retry; tell them it's automatic.
+    }
+
+    if ($auto_charge) {
+        // No action needed from the winner — say so instead of sending a link.
+        notifyWinner($item_id, $user_id, $item_title, $amount, '', true);
+        return true;
+    }
+
+    // Classic path: send the checkout link.
     $checkout_url = APP_DOMAIN . '/checkout.php?item_id=' . urlencode($item_id)
         . '&user_id=' . urlencode($user_id);
 

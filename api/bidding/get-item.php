@@ -48,9 +48,10 @@ if (!$item) {
 $time_remaining = strtotime($item['auction_end_time']) - time();
 $time_remaining_ms = max(0, $time_remaining * 1000);
 
-// Calculate next minimum bid
-$next_minimum = $item['current_high_bid'] > 0
-    ? $item['current_high_bid'] + (float)$item['min_increment']
+// Calculate next minimum bid. "Has bids" requires a live high BIDDER (not just
+// a nonzero amount) so this matches the server's bid validation exactly.
+$next_minimum = ((float)$item['current_high_bid'] > 0 && !empty($item['current_high_bidder_id']))
+    ? round((float)$item['current_high_bid'] + (float)$item['min_increment'], 2)
     : (float)$item['starting_bid'];
 
 // Check if current user is winning

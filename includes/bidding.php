@@ -131,9 +131,10 @@ function validateBidAmount($bid_amount, $current_high_bid, $min_increment, $star
  * @param int $user_id User ID
  * @param float $bid_amount Bid amount
  * @param float|null $max_bid_amount Optional max bid for proxy bidding
+ * @param bool $is_buy_now Explicit Buy It Now intent from the client
  * @return array ['status' => 'success'|'error', 'message' => string, ...]
  */
-function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
+function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = null, $is_buy_now = false) {
     // Use the shared singleton connection so the FOR UPDATE lock below and the
     // queries inside placeBid() (which go through getDB()) run on the SAME
     // connection/transaction. Previously this used an undefined `global $mysqli`
@@ -172,7 +173,7 @@ function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = 
         $lockStmt->close();
 
         // Now do the actual bid placement with the lock held
-        $result = placeBid($item_id, $user_id, $bid_amount, $max_bid_amount);
+        $result = placeBid($item_id, $user_id, $bid_amount, $max_bid_amount, $is_buy_now);
 
         if ($result['status'] === 'success') {
             $mysqli->commit();
@@ -201,9 +202,10 @@ function placeBidWithLocking($item_id, $user_id, $bid_amount, $max_bid_amount = 
  * @param int $user_id User ID
  * @param float $bid_amount Bid amount
  * @param float|null $max_bid_amount Optional max bid for proxy bidding
+ * @param bool $is_buy_now Explicit Buy It Now intent from the client
  * @return array ['status' => 'success'|'error', 'message' => string, ...]
  */
-function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
+function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null, $is_buy_now = false) {
     // Get item state
     $item = getItemState($item_id);
     if (!$item) {
@@ -232,13 +234,29 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
     $is_incumbent = (int)($item['current_high_bidder_id'] ?? 0) === (int)$user_id;
 
     // --- Buy It Now ---
-    // Evaluated BEFORE increment validation and the self-bid guard, so hitting the
-    // buy-now price always wins — even from the current leader, and even when the
-    // next increment would exceed buy-now (which used to reject it). The winner's
-    // payment request + checkout link are created by the caller AFTER commit via
-    // the 'buy_now' flag, so we never hold the row lock during Twilio/push calls.
+    // Only entered on EXPLICIT client intent ($is_buy_now). Previously any bid
+    // whose amount happened to meet the buy-now price was silently converted
+    // into an instant purchase that closed the auction — several testers "won"
+    // items by accident that way. Now a regular bid that reaches buy-now gets a
+    // distinct error telling the client to show the buy-now confirmation.
+    // Evaluated BEFORE increment validation and the self-bid guard, so buying
+    // now always works — even from the current leader. The winner's payment
+    // request is created by the caller AFTER commit via the 'buy_now' flag, so
+    // we never hold the row lock during Stripe/Twilio/push calls.
     $buy_now_price = isset($item['buy_now_price']) ? (float)$item['buy_now_price'] : 0.0;
-    if ($buy_now_price > 0 && $bid_amount >= $buy_now_price) {
+    if (!$is_buy_now && $buy_now_price > 0 && $bid_amount >= $buy_now_price) {
+        return [
+            'status' => 'error',
+            'code' => 'meets_buy_now',
+            'message' => 'That amount meets the Buy It Now price of $' . number_format($buy_now_price, 2)
+                . '. Buying now wins the item instantly and ends bidding — please confirm.',
+            'buy_now_price' => $buy_now_price
+        ];
+    }
+    if ($is_buy_now && !($buy_now_price > 0)) {
+        return ['status' => 'error', 'message' => 'Buy It Now is not available for this item'];
+    }
+    if ($is_buy_now) {
         $win_amount = normalizeBidMoney($buy_now_price);
         $prior_bidder = (int)($item['current_high_bidder_id'] ?? 0);
 
@@ -298,15 +316,35 @@ function placeBid($item_id, $user_id, $bid_amount, $max_bid_amount = null) {
 
     // Validate bid amount (skip for the incumbent raising their max — they already
     // lead, so the "beat the current price" rule doesn't apply to a max increase).
+    // An item only truly "has bids" when there is a live high BIDDER. Seeded or
+    // reset data can leave current_high_bid > 0 with no bidder — the displayed
+    // minimum (starting bid) and the validation minimum must agree on that case,
+    // or the advertised Quick Bid amount gets rejected.
+    $validation_high_bid = !empty($item['current_high_bidder_id'])
+        ? (float)$item['current_high_bid']
+        : 0.0;
+
     if (!$is_incumbent) {
         $validation = validateBidAmount(
             $bid_amount,
-            (float)$item['current_high_bid'],
+            $validation_high_bid,
             (float)$item['min_increment'],
             (float)$item['starting_bid']
         );
         if (!$validation['valid']) {
-            return ['status' => 'error', 'message' => $validation['message']];
+            // Include the CURRENT minimum so a client whose quick-bid amount
+            // went stale (someone bid in the polling gap) can refresh its UI
+            // and re-prompt instead of dead-ending on an error.
+            $fresh_minimum = $validation_high_bid > 0
+                ? round(calculateNextBid($validation_high_bid, (float)$item['min_increment']), 2)
+                : (float)$item['starting_bid'];
+            return [
+                'status' => 'error',
+                'code' => 'bid_too_low',
+                'message' => $validation['message'],
+                'next_minimum' => $fresh_minimum,
+                'current_high_bid' => (float)$item['current_high_bid']
+            ];
         }
     }
 

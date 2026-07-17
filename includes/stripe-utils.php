@@ -163,6 +163,112 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
 }
 
 /**
+ * Create ONE Stripe Checkout Session covering ALL of a winner's unpaid
+ * won items in an event (the fallback / manual path when auto-charge
+ * isn't possible). Each item is its own line item on the Stripe page.
+ *
+ * @param int $user_id Winner
+ * @param int $event_id Event scope
+ * @return array ['success'=>bool, 'session_id'=>..., 'public_key'=>..., 'total'=>float] or error
+ */
+function createCombinedCheckoutSession($user_id, $event_id) {
+    try {
+        $rows = dbGetAll(
+            "SELECT t.id AS tx_id, t.amount, i.id AS item_id, i.title
+             FROM transactions t
+             JOIN items i ON i.id = t.item_id
+             WHERE t.user_id = ? AND t.status = 'pending'
+               AND i.event_id = ? AND i.is_closed = 1
+               AND i.current_high_bidder_id = t.user_id
+             ORDER BY t.id ASC",
+            [(int)$user_id, (int)$event_id]
+        );
+
+        if (!$rows) {
+            return ['success' => false, 'error' => 'Nothing awaiting payment'];
+        }
+
+        $attribution = dbGetRow(
+            "SELECT o.name AS organization_name, e.name AS event_name
+             FROM events e JOIN organizations o ON o.id = e.organization_id
+             WHERE e.id = ?",
+            [(int)$event_id]
+        );
+        $org_name = $attribution['organization_name'] ?? '';
+        $event_name = $attribution['event_name'] ?? '';
+
+        $test_mode = defined('TEST_CHARGE_DOLLAR') && TEST_CHARGE_DOLLAR;
+
+        $stripe_keys = getEventStripeKeys($event_id);
+        if (empty($stripe_keys['public_key']) || empty($stripe_keys['secret_key'])) {
+            return ['success' => false, 'error' => 'Stripe configuration not available'];
+        }
+
+        $user = dbGetRow("SELECT id, email FROM users WHERE id = ?", [(int)$user_id]);
+        $customer = getOrCreateStripeCustomer($user_id, $user['email'] ?? '', $stripe_keys['secret_key']);
+        if (!$customer || empty($customer['id'])) {
+            return ['success' => false, 'error' => 'Failed to create payment customer'];
+        }
+
+        $session_data = [
+            'payment_method_types[0]' => 'card',
+            'customer' => $customer['id'],
+            'mode' => 'payment',
+            'success_url' => APP_DOMAIN . '/success.php?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => APP_DOMAIN . '/my-bids.php',
+            'metadata[purpose]' => 'combined_checkout',
+            'metadata[user_id]' => (int)$user_id,
+            'metadata[event_id]' => (int)$event_id,
+            'metadata[organization]' => $org_name,
+            'metadata[event_name]' => $event_name
+        ];
+
+        $tx_ids = [];
+        $total = 0.0;
+        foreach ($rows as $i => $r) {
+            $line_amount = $test_mode ? 1.00 : (float)$r['amount'];
+            $total += $line_amount;
+            $tx_ids[] = (int)$r['tx_id'];
+            $desc = ($org_name !== '' ? $org_name . ' — ' : '') . 'Silent Auction Item #' . (int)$r['item_id']
+                . ($test_mode ? ' (test charge — $1)' : '');
+            $session_data["line_items[{$i}][price_data][currency]"] = 'usd';
+            $session_data["line_items[{$i}][price_data][product_data][name]"] = $r['title'];
+            $session_data["line_items[{$i}][price_data][product_data][description]"] = $desc;
+            $session_data["line_items[{$i}][price_data][unit_amount]"] = (int)round($line_amount * 100);
+            $session_data["line_items[{$i}][quantity]"] = '1';
+
+            // Keep each transaction record in sync with what will be charged.
+            dbUpdate("UPDATE transactions SET amount = ? WHERE id = ? AND status = 'pending'",
+                [$line_amount, (int)$r['tx_id']]);
+        }
+        $session_data['metadata[transaction_ids]'] = implode(',', $tx_ids);
+
+        $response = callStripeAPI('/v1/checkout/sessions', $session_data, 'POST', $stripe_keys['secret_key']);
+        if (empty($response['id'])) {
+            $error = $response['error']['message'] ?? 'Failed to create checkout session';
+            return ['success' => false, 'error' => $error];
+        }
+
+        // Claim every covered row so the auto-charger leaves them alone.
+        foreach ($tx_ids as $tx_id) {
+            attachCheckoutSessionToPaymentRequest($tx_id, $response['id']);
+        }
+
+        return [
+            'success' => true,
+            'session_id' => $response['id'],
+            'public_key' => $stripe_keys['public_key'],
+            'event_id' => (int)$event_id,
+            'total' => $total,
+            'item_count' => count($rows)
+        ];
+    } catch (Exception $e) {
+        error_log('Stripe combined session error: ' . $e->getMessage());
+        return ['success' => false, 'error' => 'Payment processing error'];
+    }
+}
+
+/**
  * Get or create a Stripe customer for a user
  * @param int $user_id User ID
  * @param string $email Email address (optional)
@@ -241,7 +347,7 @@ function handleStripeWebhook($event, $signature = '', $payload = '') {
             case 'checkout.session.completed':
                 return processCheckoutCompleted($event['data']['object'] ?? []);
             case 'payment_intent.succeeded':
-                return true; // Payment already handled via checkout.session.completed
+                return processPaymentIntentSucceeded($event['data']['object'] ?? []);
             default:
                 return true; // Ignore other event types
         }
@@ -262,6 +368,47 @@ function processCheckoutCompleted($session) {
     }
 
     try {
+        $purpose = $session['metadata']['purpose'] ?? '';
+
+        // Card setup (mode=setup): no money moved — persist the payment method.
+        if (($session['mode'] ?? '') === 'setup' || $purpose === 'card_setup') {
+            require_once __DIR__ . '/card-on-file.php';
+            return saveCardFromSetupSession($session);
+        }
+
+        // Direct donation: mark the donation row paid.
+        if ($purpose === 'donation') {
+            $donation_id = (int)($session['metadata']['donation_id'] ?? 0);
+            if ($donation_id) {
+                dbUpdate(
+                    "UPDATE donations SET status = 'paid', stripe_payment_intent_id = ? WHERE id = ? AND status != 'paid'",
+                    [$session['payment_intent'] ?? '', $donation_id]
+                );
+                return true;
+            }
+            return false;
+        }
+
+        // Combined multi-item checkout: mark every covered transaction paid.
+        if (!empty($session['metadata']['transaction_ids'])) {
+            $ids = array_filter(array_map('intval', explode(',', $session['metadata']['transaction_ids'])));
+            foreach ($ids as $tx_id) {
+                dbUpdate(
+                    "UPDATE transactions SET status = 'paid', stripe_payment_intent_id = ? WHERE id = ? AND status != 'paid'",
+                    [$session['payment_intent'] ?? '', $tx_id]
+                );
+            }
+            if ($ids) {
+                dbInsert(
+                    "INSERT INTO audit_log (event_type, user_id, description, created_at)
+                     VALUES (?, ?, ?, NOW())",
+                    ['PAYMENT_COMPLETED', (int)($session['metadata']['user_id'] ?? 0),
+                     'Combined payment completed via Stripe for transactions ' . implode(',', $ids)]
+                );
+            }
+            return true;
+        }
+
         $transaction = getPaymentRequestByCheckoutSession($session['id']);
 
         // Idempotency: Stripe retries/redelivers webhooks. If this transaction is
@@ -329,6 +476,30 @@ function processCheckoutCompleted($session) {
         error_log("Stripe payment processing error: " . $e->getMessage());
         return false;
     }
+}
+
+/**
+ * Process payment_intent.succeeded — the webhook backup for off-session
+ * auto-charges (which are normally marked paid synchronously). Idempotent.
+ * Checkout-session payments are handled by checkout.session.completed.
+ * @param array $pi PaymentIntent object
+ * @return bool
+ */
+function processPaymentIntentSucceeded($pi) {
+    if (empty($pi['id'])) {
+        return false;
+    }
+    if (($pi['metadata']['purpose'] ?? '') !== 'auction_auto_charge') {
+        return true; // not ours to handle here
+    }
+    $ids = array_filter(array_map('intval', explode(',', (string)($pi['metadata']['transaction_ids'] ?? ''))));
+    foreach ($ids as $tx_id) {
+        dbUpdate(
+            "UPDATE transactions SET status = 'paid', stripe_payment_intent_id = ? WHERE id = ? AND status != 'paid'",
+            [$pi['id'], $tx_id]
+        );
+    }
+    return true;
 }
 
 /**
@@ -413,9 +584,10 @@ function verifyStripeSignatureHeader($payload, $signature, $secret, $tolerance_s
  * @param array $data Request data
  * @param string $method HTTP method
  * @param string $stripe_secret_key Stripe secret key (optional, uses global if not provided)
+ * @param array $extra_headers Additional HTTP headers (e.g. Idempotency-Key)
  * @return array API response
  */
-function callStripeAPI($endpoint, $data = [], $method = 'POST', $stripe_secret_key = '') {
+function callStripeAPI($endpoint, $data = [], $method = 'POST', $stripe_secret_key = '', $extra_headers = []) {
     $secret_key = $stripe_secret_key ?: STRIPE_SECRET_KEY;
 
     if (!$secret_key) {
@@ -431,6 +603,9 @@ function callStripeAPI($endpoint, $data = [], $method = 'POST', $stripe_secret_k
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+    if (!empty($extra_headers)) {
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $extra_headers);
+    }
 
     if ($method === 'POST' && !empty($data)) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));

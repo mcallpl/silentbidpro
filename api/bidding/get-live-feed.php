@@ -65,12 +65,26 @@ if ($viewer_id && $item_state) {
         && (int)($item_state['current_high_bidder_id'] ?? 0) === $viewer_id;
 }
 
+// SERVER-authoritative minimum for the next bid. The client must use this
+// (not its own arithmetic) for the Quick Bid amount so the button can never
+// diverge from what the server will actually accept.
+$feed_has_bids = $item_state
+    && (float)$item_state['current_high_bid'] > 0
+    && !empty($item_state['current_high_bidder_id']);
+$next_minimum = $item_state
+    ? ($feed_has_bids
+        ? round(calculateNextBid((float)$item_state['current_high_bid'], (float)$item_state['min_increment']), 2)
+        : (float)$item_state['starting_bid'])
+    : 0.0;
+
 http_response_code(200);
 echo json_encode([
     'status' => 'ok',
     'bids' => $formatted_bids,
     'count' => count($formatted_bids),
     'current_high_bid' => (float)($item_state['current_high_bid'] ?? 0),
+    'has_bids' => $feed_has_bids,
+    'next_minimum' => $next_minimum,
     'is_closed' => (int)($item_state['is_closed'] ?? 0),
     'viewer_has_bid' => $viewer_has_bid,
     'viewer_is_winning' => $viewer_is_winning

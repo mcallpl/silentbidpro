@@ -66,6 +66,12 @@ $page_title = htmlspecialchars($item['title']) . ' - ' . APP_NAME;
 $user = getCurrentUser();
 $is_authenticated = $user !== false;
 
+// Canonical shareable link for this item (includes the event slug so a
+// recipient lands pinned to the right auction).
+$event_slug = (string)dbGetValue("SELECT slug FROM events WHERE id = ?", [(int)$item['event_id']]);
+$share_url = rtrim(APP_DOMAIN, '/') . '/item.php?id=' . (int)$item['item_number']
+    . ($event_slug !== '' ? '&event=' . rawurlencode($event_slug) : '');
+
 // CRITICAL: If PHP auth failed but user has localStorage token, they may have logged in
 // This can happen if cookies aren't persisting properly. We'll let client-side JS handle it.
 $has_local_storage_token = false;
@@ -143,6 +149,11 @@ $bid_state = $user_has_bid ? ($is_user_winning ? 'winning' : 'outbid') : 'neutra
         <section class="item-info">
             <div class="item-title-row">
                 <span class="lot-pill">Lot <?php echo (int)$item['item_number']; ?></span>
+                <button type="button" class="btn btn-secondary btn-share js-share-item"
+                        data-share-url="<?php echo htmlspecialchars($share_url); ?>"
+                        data-share-title="<?php echo htmlspecialchars($item['title']); ?>">
+                    ↗ Share
+                </button>
                 <?php if ($is_authenticated && $has_favorites): ?>
                     <button
                         type="button"
@@ -283,11 +294,16 @@ $bid_state = $user_has_bid ? ($is_user_winning ? 'winning' : 'outbid') : 'neutra
         </section>
     </div>
 
-    <!-- Bid Modal (for quick bid confirmation) -->
+    <!-- Bid Modal (bid + buy-now confirmation) -->
     <div id="bidModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <h2>Confirm Your Bid</h2>
-            <p>You're about to bid <strong id="modalBidAmount">$0.00</strong> on <strong><?php echo htmlspecialchars($item['title']); ?></strong></p>
+            <h2 id="modalTitle">Confirm Your Bid</h2>
+            <p><span id="modalBidLead">You're about to bid</span> <strong id="modalBidAmount">$0.00</strong> on <strong><?php echo htmlspecialchars($item['title']); ?></strong></p>
+            <div id="modalBuyNowWarning" class="buy-now-warning" style="display: none;">
+                ⚠️ <strong>Buy It Now ends this auction immediately.</strong> You win the item
+                on the spot, bidding closes for everyone, and your card will be charged.
+                This cannot be undone.
+            </div>
             <div class="modal-buttons">
                 <button id="confirmBidBtn" class="btn btn-primary">Confirm Bid</button>
                 <button id="cancelBidBtn" class="btn btn-secondary">Cancel</button>
@@ -311,6 +327,7 @@ $bid_state = $user_has_bid ? ($is_user_winning ? 'winning' : 'outbid') : 'neutra
         window.SBB.serverNowMs = <?php echo (int)(time() * 1000); ?>;
         window.SBB.auctionEndEpochMs = <?php echo (int)(strtotime($effective_close_time) * 1000); ?>;
         window.SBB.currentHighBid = <?php echo (float)$item['current_high_bid']; ?>;
+        window.SBB.nextMinimum = <?php echo (float)$next_bid_amount; ?>;
         window.SBB.hasBids = <?php echo $has_bids ? 'true' : 'false'; ?>;
         window.SBB.minIncrement = <?php echo (float)$item['min_increment']; ?>;
         window.SBB.startingBid = <?php echo (float)$item['starting_bid']; ?>;
