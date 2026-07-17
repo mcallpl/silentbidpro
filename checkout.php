@@ -12,6 +12,21 @@ require_once __DIR__ . '/includes/branding-helper.php';
 
 // Require authentication
 $user = getCurrentUser();
+if (!$user && !empty($_GET['auth_token'])) {
+    // Session handoff from the native app: the iOS app opens checkout in an
+    // in-app browser that has no cookie for us — accept the app's session
+    // token once, re-issue it as the HttpOnly cookie, and clean the URL
+    // (same pattern as item.php; the token never stays in the address bar).
+    $token = validateSessionToken($_GET['auth_token']);
+    if ($token) {
+        setSessionCookie(SESSION_COOKIE_NAME, $_GET['auth_token']);
+        $clean = strtok($_SERVER['REQUEST_URI'], '?');
+        $qs = $_GET;
+        unset($qs['auth_token']);
+        header('Location: ' . $clean . (!empty($qs) ? ('?' . http_build_query($qs)) : ''));
+        exit;
+    }
+}
 if (!$user) {
     header('Location: bid.php?return=' . urlencode($_SERVER['REQUEST_URI'] ?? 'checkout.php'));
     exit;
