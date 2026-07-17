@@ -46,15 +46,18 @@ if (!defined('STRIPE_PRICE_ENTERPRISE')) define('STRIPE_PRICE_ENTERPRISE', $vaul
 if (!defined('STRIPE_BILLING_WEBHOOK_SECRET')) define('STRIPE_BILLING_WEBHOOK_SECRET', $vault_stripe_billing_webhook_secret ?? getenv('STRIPE_BILLING_WEBHOOK_SECRET') ?: '');
 
 // ============================================================
-// EMAIL (SMTP) — purchase receipts / client welcome notes.
-// Uses the vault's authenticated SMTP account. Sending is a
-// silent no-op until all three are configured.
+// EMAIL — purchase receipts / client welcome notes.
+// Primary transport: SendGrid (MAIL_FROM_EMAIL must be a verified
+// sender on the account). Fallback: authenticated SMTP when its
+// password is present. Sending is a silent no-op with neither.
 // ============================================================
+if (!defined('SENDGRID_API_KEY')) define('SENDGRID_API_KEY', $vault_SendGrid_api_kay ?? '');
+if (!defined('MAIL_FROM_EMAIL')) define('MAIL_FROM_EMAIL', $vault_mail_from_email ?? 'Chip@ChipAndKim.com');
+if (!defined('MAIL_FROM_NAME')) define('MAIL_FROM_NAME', $vault_mail_from_name ?? 'Silent Bid Pro');
 if (!defined('SMTP_HOST')) define('SMTP_HOST', $vault_smtp_host ?? '');
 if (!defined('SMTP_PORT')) define('SMTP_PORT', (int)($vault_smtp_port ?? 465));
 if (!defined('SMTP_USER')) define('SMTP_USER', $vault_smtp_user ?? '');
 if (!defined('SMTP_PASS')) define('SMTP_PASS', $vault_smtp_pass ?? '');
-if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', $vault_smtp_from_name ?? 'Silent Bid Pro');
 
 // Demo login for App Store review: Apple's reviewer can't receive our SMS, so a
 // designated demo phone + fixed code bypasses Twilio and signs into a pre-seeded

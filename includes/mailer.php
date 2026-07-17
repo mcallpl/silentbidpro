@@ -16,23 +16,78 @@ require_once __DIR__ . '/fulfillment.php';
  * Is outgoing email configured?
  */
 function mailerConfigured() {
-    return SMTP_HOST !== '' && SMTP_USER !== '' && SMTP_PASS !== '';
+    return SENDGRID_API_KEY !== ''
+        || (SMTP_HOST !== '' && SMTP_USER !== '' && SMTP_PASS !== '');
 }
 
 /**
- * Send one HTML email over authenticated SMTP (implicit SSL).
+ * Send one HTML email. SendGrid first (verified sender), SMTP fallback.
+ * @param string $from_name Optional display name override (e.g. the org).
  * @return array ['success'=>bool, 'error'=>string|null]
  */
-function sendEmail($to_email, $to_name, $subject, $html_body, $text_body = '') {
-    if (!mailerConfigured()) {
-        return ['success' => false, 'error' => 'SMTP not configured'];
-    }
+function sendEmail($to_email, $to_name, $subject, $html_body, $text_body = '', $from_name = '') {
     if (!filter_var($to_email, FILTER_VALIDATE_EMAIL)) {
         return ['success' => false, 'error' => 'Invalid recipient address'];
     }
+    $from_name = $from_name !== '' ? $from_name : MAIL_FROM_NAME;
+
+    if (SENDGRID_API_KEY !== '') {
+        return sendViaSendGrid($to_email, $to_name, $subject, $html_body, $text_body, $from_name);
+    }
+    return sendViaSmtp($to_email, $to_name, $subject, $html_body, $text_body, $from_name);
+}
+
+/**
+ * SendGrid v3 mail/send.
+ */
+function sendViaSendGrid($to_email, $to_name, $subject, $html_body, $text_body, $from_name) {
+    $content = [];
+    if ($text_body !== '') {
+        $content[] = ['type' => 'text/plain', 'value' => $text_body];
+    }
+    $content[] = ['type' => 'text/html', 'value' => $html_body];
+
+    $payload = json_encode([
+        'personalizations' => [[
+            'to' => [array_filter(['email' => $to_email, 'name' => $to_name ?: null])]
+        ]],
+        'from' => ['email' => MAIL_FROM_EMAIL, 'name' => $from_name],
+        'reply_to' => ['email' => MAIL_FROM_EMAIL, 'name' => $from_name],
+        'subject' => $subject,
+        'content' => $content
+    ]);
+
+    $ch = curl_init('https://api.sendgrid.com/v3/mail/send');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . SENDGRID_API_KEY,
+            'Content-Type: application/json'
+        ]
+    ]);
+    $body = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code >= 200 && $code < 300) {
+        return ['success' => true, 'error' => null];
+    }
+    error_log("[MAIL] SendGrid send to {$to_email} failed ({$code}): " . substr((string)$body, 0, 300));
+    return ['success' => false, 'error' => "SendGrid HTTP {$code}"];
+}
+
+/**
+ * Authenticated SMTP over implicit SSL (fallback transport).
+ */
+function sendViaSmtp($to_email, $to_name, $subject, $html_body, $text_body, $from_name) {
+    if (SMTP_HOST === '' || SMTP_USER === '' || SMTP_PASS === '') {
+        return ['success' => false, 'error' => 'SMTP not configured'];
+    }
 
     $from_email = SMTP_USER;
-    $from_name = SMTP_FROM_NAME;
     if ($text_body === '') {
         $text_body = trim(preg_replace('/[ \t]+/', ' ', strip_tags(
             preg_replace('/<(br|\/p|\/div|\/h[1-6]|\/tr)>/i', "\n", $html_body)
@@ -237,7 +292,15 @@ function sendPurchaseReceiptEmail($user_id, array $tx_ids) {
         'pickup_text' => getPickupInstructions($event_id)
     ]);
 
-    $result = sendEmail($user['email'], $user['full_name'] ?: '', $email['subject'], $email['html']);
+    $org_from = trim($ctx_row['organization_name'] ?? '');
+    $result = sendEmail(
+        $user['email'],
+        $user['full_name'] ?: '',
+        $email['subject'],
+        $email['html'],
+        '',
+        $org_from !== '' ? $org_from . ' via Silent Bid Pro' : ''
+    );
 
     if ($result['success']) {
         foreach ($rows as $r) {
