@@ -299,6 +299,15 @@ function autoChargeWinner($user_id, $event_id) {
                 . '. Receipt & pickup details: ' . rtrim(APP_DOMAIN, '/') . '/my-bids.php';
             sendTwilioSMS($user['phone_number'], $msg, (int)$user_id);
         }
+
+        // Emailed receipt/thank-you (no-op when the user has no email).
+        try {
+            require_once __DIR__ . '/mailer.php';
+            sendPurchaseReceiptEmail((int)$user_id, $tx_ids);
+        } catch (\Throwable $e) {
+            error_log('[AUTO-CHARGE] receipt email failed (charge stands): ' . $e->getMessage());
+        }
+
         return ['charged' => true, 'amount' => $total_cents / 100, 'hard_declined' => false, 'error' => null];
     }
 

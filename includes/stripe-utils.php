@@ -405,6 +405,12 @@ function processCheckoutCompleted($session) {
                     ['PAYMENT_COMPLETED', (int)($session['metadata']['user_id'] ?? 0),
                      'Combined payment completed via Stripe for transactions ' . implode(',', $ids)]
                 );
+                try {
+                    require_once __DIR__ . '/mailer.php';
+                    sendPurchaseReceiptEmail((int)($session['metadata']['user_id'] ?? 0), $ids);
+                } catch (\Throwable $e) {
+                    error_log('[STRIPE] combined receipt email failed: ' . $e->getMessage());
+                }
             }
             return true;
         }
@@ -470,6 +476,14 @@ function processCheckoutCompleted($session) {
                 'Payment completed via Stripe'
             ]
         );
+
+        // Emailed receipt/thank-you (idempotent; no-op without an email).
+        try {
+            require_once __DIR__ . '/mailer.php';
+            sendPurchaseReceiptEmail((int)($user_id ?: $transaction['user_id']), [(int)$transaction['id']]);
+        } catch (\Throwable $e) {
+            error_log('[STRIPE] receipt email failed: ' . $e->getMessage());
+        }
 
         return true;
     } catch (Exception $e) {

@@ -45,6 +45,17 @@ if (!defined('STRIPE_PRICE_PRO')) define('STRIPE_PRICE_PRO', $vault_stripe_price
 if (!defined('STRIPE_PRICE_ENTERPRISE')) define('STRIPE_PRICE_ENTERPRISE', $vault_stripe_price_enterprise ?? getenv('STRIPE_PRICE_ENTERPRISE') ?: '');
 if (!defined('STRIPE_BILLING_WEBHOOK_SECRET')) define('STRIPE_BILLING_WEBHOOK_SECRET', $vault_stripe_billing_webhook_secret ?? getenv('STRIPE_BILLING_WEBHOOK_SECRET') ?: '');
 
+// ============================================================
+// EMAIL (SMTP) — purchase receipts / client welcome notes.
+// Uses the vault's authenticated SMTP account. Sending is a
+// silent no-op until all three are configured.
+// ============================================================
+if (!defined('SMTP_HOST')) define('SMTP_HOST', $vault_smtp_host ?? '');
+if (!defined('SMTP_PORT')) define('SMTP_PORT', (int)($vault_smtp_port ?? 465));
+if (!defined('SMTP_USER')) define('SMTP_USER', $vault_smtp_user ?? '');
+if (!defined('SMTP_PASS')) define('SMTP_PASS', $vault_smtp_pass ?? '');
+if (!defined('SMTP_FROM_NAME')) define('SMTP_FROM_NAME', $vault_smtp_from_name ?? 'Silent Bid Pro');
+
 // Demo login for App Store review: Apple's reviewer can't receive our SMS, so a
 // designated demo phone + fixed code bypasses Twilio and signs into a pre-seeded
 // demo account. Enabled only when both are set (prod config.local.php).
