@@ -44,7 +44,12 @@ $branding = getBrandingData();
     </header>
 
     <main>
-        <?php if ($branding): ?>
+        <?php
+        // The homepage shows NO event banner by default — it is a pure product
+        // landing page (owner request, 2026-07-16). To feature an event again,
+        // add `define('SBB_HOMEPAGE_SHOW_EVENT', true);` to config.local.php.
+        ?>
+        <?php if ($branding && defined('SBB_HOMEPAGE_SHOW_EVENT') && SBB_HOMEPAGE_SHOW_EVENT): ?>
             <?php renderEventBanner(['show_logo' => true, 'show_mission' => true]); ?>
         <?php endif; ?>
 
