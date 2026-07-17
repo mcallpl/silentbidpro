@@ -116,6 +116,24 @@ function getCurrentEvent() {
         }
     }
 
+    // PUBLIC FRONT DOOR (homepage): never expose a non-open event. A session
+    // pinned to a draft/closed auction (e.g. a private test event) keeps its
+    // pin for the bidding pages, but the landing page always wears the
+    // currently OPEN event's face — display only, the pin is not modified.
+    if (defined('SBB_PUBLIC_FRONT_DOOR') && SBB_PUBLIC_FRONT_DOOR) {
+        if (!empty($_SESSION['bidder_event_id'])) {
+            $pinned = getEventById((int)$_SESSION['bidder_event_id']);
+            if ($pinned && ($pinned['status'] ?? '') === 'open') {
+                return $pinned;
+            }
+        }
+        $active = getActiveEvent();
+        if ($active) {
+            return $active;
+        }
+        // Nothing open at all — fall through to normal resolution.
+    }
+
     // 2) No link: stay locked to the auction already pinned for this session.
     if (!empty($_SESSION['bidder_event_id'])) {
         $event = getEventById((int)$_SESSION['bidder_event_id']);

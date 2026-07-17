@@ -4,9 +4,19 @@
 // Professional front door for bidders, nonprofits, and admins.
 // ============================================================
 
+// PUBLIC FRONT DOOR: the homepage always shows the currently OPEN event's
+// branding, even to a browser session pinned to a private draft/closed test
+// auction. (Bidding pages keep honoring the pin — that isolation is a feature.)
+define('SBB_PUBLIC_FRONT_DOOR', true);
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/page-meta.php';
 require_once __DIR__ . '/includes/branding-helper.php';
+
+// Never let a browser cache serve a stale event banner.
+header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 $page_title = APP_NAME . ' - Silent Auctions Made Warm, Simple, and Professional';
 $branding = getBrandingData();
