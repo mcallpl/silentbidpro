@@ -19,7 +19,7 @@ header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-$page_title = APP_NAME . ' - Your Auction. Your Brand. More Impact.';
+$page_title = APP_NAME . '™ - Your Auction. Your Brand. More Impact.';
 $branding = getBrandingData();
 ?>
 <!DOCTYPE html>
@@ -43,18 +43,17 @@ $branding = getBrandingData();
 <header class="sbp-nav" id="sbpNav" aria-label="Primary navigation">
     <div class="sbp-wrap">
         <a class="sbp-nav-logo" href="index.php" aria-label="Silent Bid Pro home">
-            <img src="images/brand/silentbidpro-logo-black.png" alt="Silent Bid Pro" width="160" height="40">
+            <img src="images/brand/silentbidpro-logo-black.png" alt="Silent Bid Pro" width="192" height="48">
+            <sup class="sbp-tm" aria-hidden="true">™</sup>
         </a>
         <nav class="sbp-nav-links" aria-label="Sections">
-            <a href="#platform">Platform</a>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#for-bidders">For Bidders</a>
+            <a href="#how-it-works">How it works</a>
             <a href="#for-organizations">For Organizations</a>
-            <a href="#pricing">Pricing</a>
-            <a href="#resources">Resources</a>
+            <a href="#for-bidders">For Bidders</a>
+            <a href="pricing.php">Pricing</a>
         </nav>
         <div class="sbp-nav-right">
-            <a class="sbp-nav-signin" href="bid.php">Sign In</a>
+            <a class="sbp-nav-signin" href="command-center.php">Sign In</a>
             <a class="sbp-btn sbp-btn-primary" href="#request-demo">Request a Demo</a>
             <button class="sbp-nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sbpDrawer" data-drawer-open>
                 <span></span><span></span><span></span>
@@ -71,13 +70,11 @@ $branding = getBrandingData();
             <img src="images/brand/silentbidpro-logo-dark.png" alt="Silent Bid Pro">
             <button class="sbp-drawer-close" type="button" aria-label="Close menu" data-drawer-close>&times;</button>
         </div>
-        <a href="#platform" data-drawer-close>Platform</a>
-        <a href="#how-it-works" data-drawer-close>How It Works</a>
-        <a href="#for-bidders" data-drawer-close>For Bidders</a>
+        <a href="#how-it-works" data-drawer-close>How it works</a>
         <a href="#for-organizations" data-drawer-close>For Organizations</a>
-        <a href="#pricing" data-drawer-close>Pricing</a>
-        <a href="#resources" data-drawer-close>Resources</a>
-        <a href="bid.php" data-drawer-close>Sign In</a>
+        <a href="#for-bidders" data-drawer-close>For Bidders</a>
+        <a href="pricing.php" data-drawer-close>Pricing</a>
+        <a href="command-center.php" data-drawer-close>Sign In</a>
         <a class="sbp-btn sbp-btn-primary" href="#request-demo" data-drawer-close>Request a Demo</a>
     </div>
 </div>
@@ -100,13 +97,13 @@ $branding = getBrandingData();
                 Create a beautifully branded auction experience your guests love. Then manage bidding, payments, and results from one central command center.
             </p>
             <div class="sbp-hero-actions">
-                <button class="sbp-btn sbp-btn-primary sbp-btn-lg" type="button" data-modal-open="liveModal">
+                <a class="sbp-btn sbp-btn-primary sbp-btn-lg" href="live-auction.php">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.25"/><path d="M10 8l6 4-6 4V8z" fill="currentColor"/></svg>
                     Watch a Live Auction
-                </button>
-                <button class="sbp-btn sbp-btn-secondary sbp-btn-lg on-dark" type="button" data-modal-open="dashModal">
+                </a>
+                <a class="sbp-btn sbp-btn-secondary sbp-btn-lg" href="command-center.php">
                     Explore the Dashboard
-                </button>
+                </a>
             </div>
             <div class="sbp-hero-props" aria-label="Platform highlights">
                 <div class="sbp-hero-prop">
@@ -116,8 +113,8 @@ $branding = getBrandingData();
                 </div>
                 <div class="sbp-hero-prop">
                     <span class="sbp-hero-prop-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M4 20c0-3 2-5 5-5s5 2 5 5M17 11l2 2 3-3"/></svg></span>
-                    <strong>Loved by guests</strong>
-                    <span>Easy and mobile first</span>
+                    <strong>Easy for guests</strong>
+                    <span>Simple and mobile first</span>
                 </div>
                 <div class="sbp-hero-prop">
                     <span class="sbp-hero-prop-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18l5-5 3 3 7-8"/><path d="M16 8h4v4"/></svg></span>
@@ -129,13 +126,6 @@ $branding = getBrandingData();
                     <strong>Secure and reliable</strong>
                     <span>Payments handled safely</span>
                 </div>
-            </div>
-            <div class="sbp-hero-appstore">
-                <a class="app-store-badge" data-appstore-badge hidden
-                   href="https://apps.apple.com/us/app/id6787838881"
-                   aria-label="Download Silent Bid Pro on the App Store">
-                    <img src="images/brand/app-store-badge.svg" alt="Download on the App Store" height="44">
-                </a>
             </div>
         </div>
 
@@ -170,7 +160,7 @@ $branding = getBrandingData();
                     <span class="sbp-hood-cta">Browse Items</span>
                 </div>
                 <div class="sbp-feat">
-                    <div class="sbp-feat-head"><b>Featured Items</b><a href="#">View all items</a></div>
+                    <div class="sbp-feat-head"><b>Featured Items</b><a href="live-auction.php">View all items</a></div>
                     <div class="sbp-feat-grid">
                         <div class="sbp-feat-card"><div class="sbp-feat-thumb"><img src="images/items/web/wine.jpg" alt="" loading="lazy" width="140" height="90"></div><div class="sbp-feat-body"><b>Napa Vineyard Weekend</b><span class="price">$1,250</span> <span class="bids">12 bids</span></div></div>
                         <div class="sbp-feat-card"><div class="sbp-feat-thumb"><img src="images/items/web/cabin.jpg" alt="" loading="lazy" width="140" height="90"></div><div class="sbp-feat-body"><b>Mountain Cabin Retreat</b><span class="price">$950</span> <span class="bids">8 bids</span></div></div>
@@ -206,40 +196,35 @@ $branding = getBrandingData();
 </section>
 
 <!-- ============================================================
-     LIVE AUCTION PULSE — live-stats band directly under the hero
+     HOW IT WORKS — the whole story in three steps
      ============================================================ -->
-<section class="sbp-pulse" id="how-it-works" aria-labelledby="pulseTitle">
+<section class="sbp-section sbp-how" id="how-it-works" aria-labelledby="howTitle">
     <div class="sbp-wrap">
-        <h2 id="pulseTitle" class="sbp-pulse-live"><span class="sbp-pulse-dot" aria-hidden="true"></span>Live Auction Pulse</h2>
-        <div class="sbp-pulse-metrics">
-            <div class="sbp-pulse-metric">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 6a3 3 0 010 6M21 20c0-2-1-3-3-4"/></svg>
-                <span><b>421</b><span>Guests Online</span></span>
+        <div class="sbp-head">
+            <p class="sbp-eyebrow">How it works</p>
+            <h2 id="howTitle" class="sbp-serif">From setup to payout in three steps.</h2>
+            <p>Everything a modern fundraising auction needs, without the parts your team dreads.</p>
+        </div>
+        <div class="sbp-how-grid">
+            <div class="sbp-how-step">
+                <span class="sbp-how-n">1</span>
+                <span class="sbp-how-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6 6 10a6 6 0 01-12 0c0-4 6-10 6-10z"/></svg></span>
+                <h3>Brand your auction</h3>
+                <p>Set your colors, logo, and cover photo in the Branding Studio. No designer required, and you preview it before you go live.</p>
             </div>
-            <div class="sbp-pulse-metric">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4l6 6-9 9-6 1 1-6 8-10z"/></svg>
-                <span><b>2,184</b><span>Bids Today</span></span>
+            <div class="sbp-how-step">
+                <span class="sbp-how-n">2</span>
+                <span class="sbp-how-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span>
+                <h3>Guests bid from their phones</h3>
+                <p>Guests scan a code or tap a link and start bidding in seconds, right from their phone, anywhere in the room.</p>
             </div>
-            <div class="sbp-pulse-metric">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21C7 17 3 13 3 8.5A4.5 4.5 0 0112 6a4.5 4.5 0 019 2.5C21 13 17 17 12 21z"/></svg>
-                <span><b class="accent">128%</b><span>Of Goal</span></span>
-            </div>
-            <div class="sbp-pulse-metric">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                <span><b>$128,450</b><span>Raised</span></span>
-            </div>
-            <div class="sbp-pulse-metric">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                <span><b>12</b><span>Items Closing Soon</span></span>
+            <div class="sbp-how-step">
+                <span class="sbp-how-n">3</span>
+                <span class="sbp-how-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span>
+                <h3>Winners pay, you get paid</h3>
+                <p>Cards charge automatically the moment bidding closes, receipts email themselves, and funds land in your account.</p>
             </div>
         </div>
-        <div class="sbp-pulse-foot">
-            <button class="sbp-btn sbp-btn-primary" type="button" data-modal-open="liveModal">
-                Watch Live Now
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </button>
-        </div>
-        <p class="sbp-pulse-disclaimer">Product Demonstration Data</p>
     </div>
 </section>
 
@@ -249,34 +234,51 @@ $branding = getBrandingData();
 <section class="sbp-section alt" id="for-organizations" aria-labelledby="orgTitle">
     <div class="sbp-wrap">
         <div class="sbp-head">
-            <p class="sbp-eyebrow">White-label branding control</p>
+            <p class="sbp-eyebrow">Admin &middot; White-label branding control</p>
             <h2 id="orgTitle" class="sbp-serif">Your brand takes center stage.</h2>
-            <p>Customize colors, typography, logos, and imagery so your auction feels like a natural extension of your organization.</p>
+            <p>From your admin console, customize colors, typography, logos, and imagery so your auction feels like a natural extension of your organization.</p>
         </div>
 
         <div class="sbp-switcher" data-brand-switcher>
-            <div class="sbp-switch-tabs" role="tablist" aria-label="Branded auction examples">
-                <button class="sbp-switch-tab is-active" role="tab" id="brandtab-health" aria-controls="brandPreview" aria-selected="true" tabindex="0" data-theme="health">Children's Health</button>
-                <button class="sbp-switch-tab" role="tab" id="brandtab-rescue" aria-controls="brandPreview" aria-selected="false" tabindex="-1" data-theme="rescue">Animal Rescue</button>
-                <button class="sbp-switch-tab" role="tab" id="brandtab-gala" aria-controls="brandPreview" aria-selected="false" tabindex="-1" data-theme="gala">University Gala</button>
-                <button class="sbp-switch-tab" role="tab" id="brandtab-conservation" aria-controls="brandPreview" aria-selected="false" tabindex="-1" data-theme="conservation">Conservation</button>
-            </div>
-
-            <div class="sbp-switch-preview" id="brandPreview" role="tabpanel" aria-labelledby="brandtab-health" aria-live="polite" tabindex="0">
-                <div class="sbp-switch-inner" data-preview-inner>
-                    <div class="sbp-switch-banner">
-                        <span class="sbp-switch-sample">Sample</span>
-                        <p class="sbp-switch-org"><span class="mk" data-p-initials>CH</span><span data-p-org>Children's Health Foundation</span></p>
-                        <h3 class="sbp-serif" data-p-title>Healing Starts Here</h3>
+            <div class="sbp-console">
+                <div class="sbp-console-bar">
+                    <div class="sbp-console-id">
+                        <span class="sbp-console-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <svg class="sbp-console-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                        <b>Branding Studio</b>
+                        <span class="sbp-console-tag">Admin</span>
                     </div>
-                    <div class="sbp-switch-foot">
-                        <div class="sbp-switch-metric">
-                            <b data-p-pct>142%</b>
-                            <span>Of goal raised</span>
-                        </div>
-                        <div class="sbp-switch-actions">
-                            <span class="sbp-switch-fig"><b data-p-amount>$284,000</b><small>Raised</small></span>
-                            <button class="sbp-switch-btn" type="button" data-p-btn>Preview Experience</button>
+                    <span class="sbp-console-live"><span class="d"></span>Live preview</span>
+                </div>
+                <div class="sbp-console-body">
+                    <p class="sbp-console-label" id="brandPickLabel">Choose a brand to configure</p>
+                    <div class="sbp-switch-tabs" role="tablist" aria-labelledby="brandPickLabel">
+                        <button class="sbp-switch-tab is-active" role="tab" id="brandtab-health" aria-controls="brandPreview" aria-selected="true" tabindex="0" data-theme="health">Children's Health</button>
+                        <button class="sbp-switch-tab" role="tab" id="brandtab-rescue" aria-controls="brandPreview" aria-selected="false" tabindex="-1" data-theme="rescue">Animal Rescue</button>
+                        <button class="sbp-switch-tab" role="tab" id="brandtab-gala" aria-controls="brandPreview" aria-selected="false" tabindex="-1" data-theme="gala">University Gala</button>
+                        <button class="sbp-switch-tab" role="tab" id="brandtab-conservation" aria-controls="brandPreview" aria-selected="false" tabindex="-1" data-theme="conservation">Conservation</button>
+                    </div>
+
+                    <div class="sbp-switch-preview" id="brandPreview" role="tabpanel" aria-labelledby="brandtab-health" aria-live="polite" tabindex="0">
+                        <div class="sbp-switch-inner" data-preview-inner>
+                            <div class="sbp-switch-banner">
+                                <span class="sbp-switch-sample">Sample</span>
+                                <p class="sbp-switch-org"><span class="mk" data-p-initials>CH</span><span data-p-org>Children's Health Foundation</span></p>
+                                <h3 class="sbp-serif" data-p-title>Healing Starts Here</h3>
+                            </div>
+                            <div class="sbp-switch-foot">
+                                <div class="sbp-switch-metric">
+                                    <b data-p-pct>142%</b>
+                                    <span>Of goal raised</span>
+                                </div>
+                                <div class="sbp-switch-actions">
+                                    <span class="sbp-switch-fig"><b data-p-amount>$284,000</b><small>Raised</small></span>
+                                    <div class="sbp-switch-cta">
+                                        <button class="sbp-switch-btn" type="button" data-p-btn>Preview &amp; customize</button>
+                                        <button class="sbp-switch-live" type="button" data-p-live><span class="d" aria-hidden="true"></span>View live auction</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -294,7 +296,7 @@ $branding = getBrandingData();
         <div class="sbp-head">
             <p class="sbp-eyebrow">Frictionless bidder journey</p>
             <h2 id="bidderTitle" class="sbp-serif">Designed for every guest. On any device.</h2>
-            <p>Zero app downloads required. Guests scan a QR code, browse items, place bids, and check out from their mobile browser.</p>
+            <p>Guests scan a QR code, browse items, place bids, and check out, all from their phone.</p>
         </div>
 
         <div class="sbp-stepper" data-stepper>
@@ -303,7 +305,7 @@ $branding = getBrandingData();
                 <div class="sbp-step-tracker" role="tablist" aria-label="Bidder journey steps" aria-orientation="vertical">
                     <button class="sbp-track-item is-active" role="tab" id="btrack-0" aria-selected="true" aria-controls="bidderPanel" tabindex="0" data-step="0">
                         <span class="sbp-track-dot"></span>
-                        <span class="sbp-track-txt"><b>Check-In</b><span>Register and access the auction in one tap</span></span>
+                        <span class="sbp-track-txt"><b>Check-In</b><span>Sign in fast with a texted code</span></span>
                     </button>
                     <button class="sbp-track-item" role="tab" id="btrack-1" aria-selected="false" aria-controls="bidderPanel" tabindex="-1" data-step="1">
                         <span class="sbp-track-dot"></span>
@@ -323,9 +325,9 @@ $branding = getBrandingData();
                     <div class="sbp-narr-inner" data-bnarrative>
                         <span class="sbp-narr-count"><b data-bn-num>01</b> / 04</span>
                         <h3 class="sbp-serif" data-bn-title>Check-In</h3>
-                        <p data-bn-desc>Guests join instantly. A one-tap magic link gets them into your branded auction with no app and no password.</p>
+                        <p data-bn-desc>Guests join in seconds with a sign-in code texted to their phone. No password to remember.</p>
                         <ul class="sbp-narr-bullets" data-bn-bullets>
-                            <li>SMS magic link</li>
+                            <li>Texted sign-in code</li>
                             <li>No passwords required</li>
                             <li>Instant access</li>
                         </ul>
@@ -352,7 +354,7 @@ $branding = getBrandingData();
                             <p>Join the auction in seconds.</p>
                             <button class="sbp-app-btn" type="button" tabindex="-1">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4zM4 7l8 5 8-5"/></svg>
-                                Send One-Tap Login Link
+                                Text me a sign-in code
                             </button>
                             <div class="sbp-app-or">Or enter phone number</div>
                             <div class="sbp-app-field">(555) 019-2831</div>
@@ -382,7 +384,7 @@ $branding = getBrandingData();
                     <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg></span>Item cataloging and guest management</li>
                     <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg></span>One-click financial reconciliation reports</li>
                 </ul>
-                <button class="sbp-btn sbp-btn-primary" type="button" data-modal-open="dashModal">Explore the Dashboard</button>
+                <a class="sbp-btn sbp-btn-primary" href="command-center.php">Explore the Dashboard</a>
             </div>
 
             <div class="sbp-dash" role="img" aria-label="Administrator dashboard preview for the Spring Gala Silent Auction: total raised 128,450 dollars at 128 percent of goal, 342 active bidders, 215 items, 96,320 dollars collected, and an automated closeout panel showing payment processor connected, receipts auto-sending, and payout scheduled for May 15.">
@@ -435,9 +437,9 @@ $branding = getBrandingData();
 <section class="sbp-section" id="resources" aria-labelledby="closeoutTitle">
     <div class="sbp-wrap">
         <div class="sbp-head">
-            <p class="sbp-eyebrow">Automated post-event closeout</p>
+            <p class="sbp-eyebrow">Closeout &amp; reporting</p>
             <h2 id="closeoutTitle" class="sbp-serif">Zero manual chasing. Complete settlement in minutes.</h2>
-            <p>Automate card charges, tax-compliant receipting, item fulfillment, and accounting exports the moment bidding closes.</p>
+            <p>Automatically charge winners, email receipts, and export a clean report the moment bidding closes.</p>
         </div>
         <div class="sbp-closeout" data-closeout>
             <div class="sbp-closeout-copy">
@@ -446,7 +448,7 @@ $branding = getBrandingData();
                         <span class="n">1</span><span class="lab"><b>Bidding Locks</b><span>Winners auto-charged the second bidding ends</span></span>
                     </button>
                     <button class="sbp-close-step is-active" role="tab" id="cctab-1" aria-selected="true" aria-controls="closePanel" tabindex="0" data-step="1">
-                        <span class="n">2</span><span class="lab"><b>Settlement &amp; Receipts</b><span>Balances reconciled and tax receipts sent</span></span>
+                        <span class="n">2</span><span class="lab"><b>Settlement &amp; Receipts</b><span>Balances reconciled and receipts emailed</span></span>
                     </button>
                     <button class="sbp-close-step" role="tab" id="cctab-2" aria-selected="false" aria-controls="closePanel" tabindex="-1" data-step="2">
                         <span class="n">3</span><span class="lab"><b>Final Deposit &amp; Export</b><span>Funds deposited and books exported</span></span>
@@ -462,37 +464,23 @@ $branding = getBrandingData();
                 </div>
                 <div class="sbp-close-metrics" data-cc-inner>
                     <div class="sbp-close-metric">
-                        <span class="lab">Paid Balance</span>
+                        <span class="lab">Collected</span>
                         <b data-cc-paid>$96,320</b>
-                        <span class="sub" data-cc-paidsub>268 card charges processed</span>
+                        <span class="sub" data-cc-paidsub>268 winners charged</span>
                     </div>
                     <div class="sbp-close-metric">
-                        <span class="lab">Unpaid Balance</span>
+                        <span class="lab">Outstanding</span>
                         <b data-cc-unpaid>$32,130</b>
-                        <span class="pill" data-cc-unpaidpill>Auto-SMS reminders active</span>
+                        <span class="sub" data-cc-unpaidsub>Auto-charging</span>
                     </div>
                     <div class="sbp-close-metric">
-                        <span class="lab">Tax Receipts</span>
-                        <b data-cc-receipts>268 Sent</b>
-                        <span class="sub" data-cc-receiptssub>IRS-compliant PDFs generated</span>
+                        <span class="lab">Receipts sent</span>
+                        <b data-cc-receipts>268</b>
+                        <span class="sub" data-cc-receiptssub>Emailed to donors</span>
                     </div>
-                    <div class="sbp-close-metric">
-                        <span class="lab">Item Pickup</span>
-                        <b data-cc-pickup>41 Pending</b>
-                        <span class="pill" data-cc-pickuppill>QR scan hand-off ready</span>
-                    </div>
-                </div>
-                <div class="sbp-close-rev">
-                    <h5>Revenue by Category</h5>
-                    <div class="sbp-cat-row"><span>Travel &amp; Vacations</span><span class="sbp-cat-bar"><i style="width:100%"></i></span><span class="val">$44,200</span></div>
-                    <div class="sbp-cat-row"><span>VIP Experiences</span><span class="sbp-cat-bar"><i style="width:72%"></i></span><span class="val">$31,800</span></div>
-                    <div class="sbp-cat-row"><span>Fine Dining</span><span class="sbp-cat-bar"><i style="width:48%"></i></span><span class="val">$21,150</span></div>
-                    <div class="sbp-cat-row"><span>Art &amp; Items</span><span class="sbp-cat-bar"><i style="width:34%"></i></span><span class="val">$15,100</span></div>
                 </div>
                 <div class="sbp-close-utility">
-                    <button type="button" tabindex="-1">Export CSV for Accounting</button>
-                    <button type="button" tabindex="-1">Donor Tax Summary</button>
-                    <button type="button" tabindex="-1">Sync to QuickBooks</button>
+                    <button type="button" tabindex="-1">Export report</button>
                 </div>
             </div>
         </div>
@@ -509,10 +497,10 @@ $branding = getBrandingData();
             <h2 id="finalTitle" class="sbp-serif">Your next auction should feel this organized.</h2>
             <p>Create an unforgettable, branded experience for your guests and run your entire event from one command center.</p>
             <div class="sbp-final-actions">
-                <a class="sbp-btn sbp-btn-primary sbp-btn-lg" href="admin.php">Request a Demo</a>
-                <a class="sbp-btn sbp-btn-secondary sbp-btn-lg on-dark" href="#pricing">View Pricing</a>
+                <a class="sbp-btn sbp-btn-primary sbp-btn-lg" href="command-center.php?state=empty">Get Started</a>
+                <a class="sbp-btn sbp-btn-secondary sbp-btn-lg" href="pricing.php">View Pricing</a>
             </div>
-            <p class="sbp-final-note"><span class="d"></span>Ready for your next gala &bull; No app store downloads required &bull; Instant setup</p>
+            <p class="sbp-final-note"><span class="d"></span>Ready for your next gala &bull; Instant setup</p>
         </div>
     </div>
 </section>
@@ -522,98 +510,42 @@ $branding = getBrandingData();
 <!-- ============================================================
      SECTION 9 — FOOTER
      ============================================================ -->
-<footer class="sbp-footer" id="pricing">
+<footer class="sbp-footer">
     <div class="sbp-wrap">
         <div class="sbp-footer-grid">
             <div class="sbp-footer-brand">
                 <img src="images/brand/silentbidpro-logo-black.png" alt="Silent Bid Pro" width="150" height="38">
                 <p>The modern operating platform for mission-driven fundraising auctions.</p>
-                <span class="sbp-footer-status"><span class="d"></span>All Systems Operational</span>
             </div>
             <div class="sbp-footer-col">
-                <h5>Platform</h5>
-                <a href="#platform">Overview</a>
-                <a href="#for-bidders">Bidder Experience</a>
+                <h5>Product</h5>
+                <a href="#how-it-works">How it works</a>
+                <a href="#for-organizations">For Organizations</a>
+                <a href="#for-bidders">For Bidders</a>
                 <a href="#for-administrators">Command Center</a>
                 <a href="#resources">Closeout &amp; Reporting</a>
-                <a href="#how-it-works">Live Auction Pulse</a>
-                <a href="#pricing">Pricing</a>
-            </div>
-            <div class="sbp-footer-col">
-                <h5>Solutions</h5>
-                <a href="#for-organizations">Nonprofits &amp; Foundations</a>
-                <a href="#for-organizations">Corporate CSR &amp; Giving</a>
-                <a href="#for-organizations">Small Business &amp; Associations</a>
-                <a href="#for-organizations">Private Schools &amp; Universities</a>
-                <a href="#for-organizations">Healthcare Foundations</a>
-            </div>
-            <div class="sbp-footer-col">
-                <h5>Resources</h5>
-                <a href="#resources">Auction Planning Guide</a>
-                <a href="#for-bidders">Bidder Quick-Start</a>
-                <a href="#request-demo">Help Center</a>
-                <a href="#request-demo">Security &amp; Compliance</a>
-                <a href="#request-demo">System Status</a>
+                <a href="pricing.php">Pricing</a>
             </div>
             <div class="sbp-footer-col">
                 <h5>Company</h5>
-                <a href="#platform">About Us</a>
+                <a href="#request-demo">Request a Demo</a>
                 <a href="#request-demo">Contact Sales</a>
+                <a href="command-center.php">Sign In</a>
                 <a href="privacy.php">Privacy Policy</a>
                 <a href="terms.php">Terms of Service</a>
-                <a href="bid.php">Sign In</a>
-                <a href="#request-demo">Request a Demo</a>
             </div>
         </div>
         <div class="sbp-footer-bottom">
-            <span>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(APP_NAME); ?>. All rights reserved.</span>
-            <div class="sbp-social" aria-label="Social links">
-                <a href="#" aria-label="Silent Bid Pro on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 11-.02 5 2.5 2.5 0 01.02-5zM3 9h4v12H3zM10 9h3.8v1.7h.05c.53-1 1.83-2 3.75-2C21.4 8.7 22 11.1 22 14.2V21h-4v-6c0-1.4 0-3.2-2-3.2s-2.3 1.5-2.3 3.1V21h-4z"/></svg></a>
-                <a href="#" aria-label="Silent Bid Pro on X"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 3h3l-7 8 8 10h-6l-5-6-5 6H3l8-9L3 3h6l4 5z"/></svg></a>
-                <a href="#" aria-label="Silent Bid Pro on Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H7v3h3v6h3v-6h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg></a>
-            </div>
+            <span>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars(APP_NAME); ?>™. All rights reserved.</span>
         </div>
+        <p class="sbp-footer-disclaimer">Organizations, auctions, and dollar figures shown throughout this site are illustrative examples, not live data. Silent Bid Pro™ and its logo are trademarks of their owner. Card payments are processed securely by a third-party payment provider.</p>
     </div>
 </footer>
 
 <!-- ============================================================
      MODALS — product walkthroughs
      ============================================================ -->
-<div class="sbp-modal" id="liveModal" role="dialog" aria-modal="true" aria-labelledby="liveModalTitle" aria-hidden="true">
-    <div class="sbp-modal-scrim" data-modal-close></div>
-    <div class="sbp-modal-box">
-        <button class="sbp-modal-close" type="button" aria-label="Close" data-modal-close>&times;</button>
-        <h3 id="liveModalTitle" class="sbp-serif">Watch a live auction</h3>
-        <p>Here is how a bidding night unfolds inside Silent Bid Pro.</p>
-        <ol class="sbp-modal-steps">
-            <li><span class="n">1</span><span><b>Guests check in</b><span>A quick registration gets bidders into your branded auction.</span></span></li>
-            <li><span class="n">2</span><span><b>Bids roll in</b><span>Current bids, bid counts, and closing times update in real time.</span></span></li>
-            <li><span class="n">3</span><span><b>The room closes</b><span>Items close on schedule and winners are notified right away.</span></span></li>
-        </ol>
-        <div class="sbp-modal-actions">
-            <a class="sbp-btn sbp-btn-primary" href="items.php">Open the Live Auction</a>
-            <button class="sbp-btn sbp-btn-secondary" type="button" data-modal-close>Close</button>
-        </div>
-    </div>
-</div>
 
-<div class="sbp-modal" id="dashModal" role="dialog" aria-modal="true" aria-labelledby="dashModalTitle" aria-hidden="true">
-    <div class="sbp-modal-scrim" data-modal-close></div>
-    <div class="sbp-modal-box">
-        <button class="sbp-modal-close" type="button" aria-label="Close" data-modal-close>&times;</button>
-        <h3 id="dashModalTitle" class="sbp-serif">Explore the dashboard</h3>
-        <p>The command center where you run the whole event.</p>
-        <ol class="sbp-modal-steps">
-            <li><span class="n">1</span><span><b>See it all at a glance</b><span>Total raised, active bidders, items, and payments in one view.</span></span></li>
-            <li><span class="n">2</span><span><b>Manage as you go</b><span>Items, bidders, teams, and closing times stay in your control.</span></span></li>
-            <li><span class="n">3</span><span><b>Close with confidence</b><span>Payments, receipts, and payouts are handled after bidding ends.</span></span></li>
-        </ol>
-        <div class="sbp-modal-actions">
-            <a class="sbp-btn sbp-btn-primary" href="admin.php">Open the Admin Console</a>
-            <button class="sbp-btn sbp-btn-secondary" type="button" data-modal-close>Close</button>
-        </div>
-    </div>
-</div>
 
 <script>
 // ---- Sticky nav: transparent over hero, solid on scroll ----
@@ -680,6 +612,21 @@ $branding = getBrandingData();
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var current = 'health';
 
+    // "Preview & customize" opens the branded page with the live Branding Studio.
+    var previewBtn = root.querySelector('[data-p-btn]');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function () {
+            window.open('preview.php?brand=' + encodeURIComponent(current), '_blank', 'noopener');
+        });
+    }
+    // "View live auction" opens that same brand's live bidding experience.
+    var liveBtn = root.querySelector('[data-p-live]');
+    if (liveBtn) {
+        liveBtn.addEventListener('click', function () {
+            window.open('live-auction.php?brand=' + encodeURIComponent(current), '_blank', 'noopener');
+        });
+    }
+
     function paint(key) {
         var t = THEMES[key];
         if (!t) return;
@@ -742,12 +689,12 @@ $branding = getBrandingData();
     var STEPS = [
         {
             num: '01', title: 'Check-In',
-            desc: 'Guests join instantly. A one-tap magic link gets them into your branded auction, with no app and no password.',
-            bullets: ['SMS magic link', 'No passwords required', 'Instant access'],
+            desc: 'Guests join in seconds with a sign-in code texted to their phone. No password to remember.',
+            bullets: ['Texted sign-in code', 'No passwords required', 'Instant access'],
             screen:
                 '<div class="sbp-app-org"><span class="mk">GE</span>Greenfield Education Gala</div>' +
                 '<div class="sbp-app-checkin"><h4 class="sbp-serif">Welcome</h4><p>Join the auction in seconds.</p>' +
-                '<button class="sbp-app-btn" type="button" tabindex="-1">' + sms + 'Send One-Tap Login Link</button>' +
+                '<button class="sbp-app-btn" type="button" tabindex="-1">' + sms + 'Text me a sign-in code</button>' +
                 '<div class="sbp-app-or">Or enter phone number</div><div class="sbp-app-field">(555) 019-2831</div></div>'
         },
         {
@@ -864,21 +811,18 @@ $branding = getBrandingData();
     var root = document.querySelector('[data-closeout]');
     if (!root) return;
     var STEPS = [
-        { badge: 'Charging Cards',
-          paid: '$71,450', paidsub: '198 of 268 cards charged',
-          unpaid: '$56,900', unpaidpill: 'Auto-charge in progress',
-          receipts: '198 Sent', receiptssub: 'Generating remaining PDFs',
-          pickup: '41 Pending', pickuppill: 'QR scan hand-off ready' },
-        { badge: 'Settlement Automated',
-          paid: '$96,320', paidsub: '268 card charges processed',
-          unpaid: '$32,130', unpaidpill: 'Auto-SMS reminders active',
-          receipts: '268 Sent', receiptssub: 'IRS-compliant PDFs generated',
-          pickup: '41 Pending', pickuppill: 'QR scan hand-off ready' },
-        { badge: 'Payout Complete',
+        { badge: 'Charging winners',
+          paid: '$71,450', paidsub: '198 of 268 charged',
+          unpaid: '$56,900', unpaidsub: 'Auto-charging',
+          receipts: '198', receiptssub: 'Emailed to donors' },
+        { badge: 'Settlement automated',
+          paid: '$96,320', paidsub: '268 winners charged',
+          unpaid: '$32,130', unpaidsub: 'Auto-charging',
+          receipts: '268', receiptssub: 'Emailed to donors' },
+        { badge: 'Payout complete',
           paid: '$128,450', paidsub: 'All winners settled',
-          unpaid: '$0', unpaidpill: 'Fully reconciled',
-          receipts: '342 Sent', receiptssub: 'All donors receipted',
-          pickup: '0 Pending', pickuppill: 'All items handed off' }
+          unpaid: '$0', unpaidsub: 'Fully reconciled',
+          receipts: '342', receiptssub: 'All donors receipted' }
     ];
     var tabs = Array.prototype.slice.call(root.querySelectorAll('.sbp-close-step'));
     var panel = root.querySelector('#closePanel');
@@ -891,9 +835,8 @@ $branding = getBrandingData();
         var s = STEPS[i];
         q('badge').textContent = s.badge;
         q('paid').textContent = s.paid; q('paidsub').textContent = s.paidsub;
-        q('unpaid').textContent = s.unpaid; q('unpaidpill').textContent = s.unpaidpill;
+        q('unpaid').textContent = s.unpaid; q('unpaidsub').textContent = s.unpaidsub;
         q('receipts').textContent = s.receipts; q('receiptssub').textContent = s.receiptssub;
-        q('pickup').textContent = s.pickup; q('pickuppill').textContent = s.pickuppill;
     }
 
     function select(i, focus) {
