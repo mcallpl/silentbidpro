@@ -500,3 +500,20 @@ body.cc {
 .cc-stripe-steps { font-size: 0.84rem; color: var(--cc-muted); line-height: 1.6; margin: 0 0 14px; padding-left: 18px; }
 .cc-stripe-steps a { color: var(--cc-green-2); font-weight: 600; }
 .cc-stripe-steps code { background: var(--cc-off); border: 1px solid var(--cc-line); border-radius: 4px; padding: 1px 4px; font-size: 0.9em; }
+.cc-flash { display: flex; flex-direction: column; gap: 4px; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; font-size: 0.9rem; line-height: 1.5; }
+.cc-flash b { font-size: 0.95rem; }
+.cc-flash.ok { background: var(--cc-ok-soft); color: var(--cc-green-2); border: 1px solid rgba(22,101,52,0.25); }
+.cc-flash.ok span { color: var(--cc-text); }
+.cc-flash.warn { background: var(--cc-warn-soft); color: var(--cc-warn); border: 1px solid rgba(180,83,9,0.25); }
+.cc-flash.warn span { color: var(--cc-text); }
+.cc-connect-hero { background: var(--cc-off); border: 1px solid var(--cc-line); border-radius: 12px; padding: 16px; margin: 4px 0 14px; }
+.cc-connect-hero h4 { margin: 0 0 6px; font-size: 0.92rem; color: var(--cc-green-2); }
+.cc-connect-hero p { font-size: 0.86rem; color: var(--cc-text); line-height: 1.55; margin: 0 0 10px; }
+.cc-connect-need { list-style: none; margin: 0 0 14px; padding: 0; font-size: 0.84rem; color: var(--cc-muted); line-height: 1.7; }
+.cc-connect-need b { color: var(--cc-text); }
+.cc-btn-lgx { padding: 13px 22px; font-size: 0.95rem; }
+.cc-stripe-note { font-size: 0.8rem; color: var(--cc-muted); line-height: 1.55; margin: 10px 0 0; }
+.cc-connect-alt { margin-top: 6px; }
+.cc-connect-alt summary { cursor: pointer; font-size: 0.84rem; font-weight: 600; color: var(--cc-muted); padding: 6px 0; }
+.cc-connect-alt summary:hover { color: var(--cc-text); }
+.cc-connect-alt[open] summary { color: var(--cc-text); margin-bottom: 8px; }

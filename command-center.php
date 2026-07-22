@@ -286,6 +286,41 @@ $stripeCfg = $selEventId ? dbGetRow(
     [$selEventId]) : null;
 $ownStripe = !empty($stripeCfg['stripe_key_publishable']);
 
+// ---- Stripe Connect state (org-level payout account) ----
+require_once __DIR__ . '/includes/connect.php';
+$caState = orgConnectAccount($orgId) ?: ['stripe_account_id' => null, 'stripe_charges_enabled' => 0, 'stripe_payouts_enabled' => 0, 'stripe_onboarding_status' => 'none'];
+if (!empty($caState['stripe_account_id']) && ($caState['stripe_onboarding_status'] ?? '') !== 'complete') {
+    // Mid-onboarding: pull live truth from Stripe so the card never lies.
+    $caState = refreshOrgConnectStatus($orgId) ?: $caState;
+}
+$connectReady = !empty($caState['stripe_account_id']) && (int)$caState['stripe_charges_enabled'] === 1;
+$connectAvail = !empty($caState['stripe_account_id']) ? true : connectPlatformAvailable();
+
+// ---- Conclusive confirmations: onboarding return + $1 payout test ----
+$connFlash = in_array(($_GET['connected'] ?? ''), ['yes', 'pending', 'restricted', 'error'], true) ? $_GET['connected'] : null;
+$payFlash = null; $payRoute = '';
+$sid = (string)($_GET['paytest'] ?? '');
+if ($sid !== '' && $sid !== 'canceled' && preg_match('/^cs_[A-Za-z0-9_]+$/', $sid)) {
+    // Verify with Stripe — the redirect alone proves nothing.
+    $sess = callStripeAPI('/v1/checkout/sessions/' . urlencode($sid), [], 'GET');
+    if (empty($sess['id'])) {
+        // Session may live on the org's own (BYO-key) account.
+        foreach ((dbGetAll(
+            "SELECT es.stripe_key_secret FROM event_settings es JOIN events e ON e.id = es.event_id
+             WHERE e.organization_id = ? AND es.stripe_key_secret IS NOT NULL AND es.stripe_key_secret <> ''",
+            [$orgId]) ?: []) as $k) {
+            $sess = callStripeAPI('/v1/checkout/sessions/' . urlencode($sid), [], 'GET', $k['stripe_key_secret']);
+            if (!empty($sess['id'])) break;
+        }
+    }
+    if (!empty($sess['id'])
+        && ($sess['metadata']['type'] ?? '') === 'payout_test'
+        && (int)($sess['metadata']['org_id'] ?? 0) === $orgId) {
+        $payFlash = (($sess['payment_status'] ?? '') === 'paid') ? 'paid' : 'unpaid';
+        $payRoute = $sess['metadata']['route'] ?? '';
+    }
+}
+
 // The same $ev shape the template renders in demo mode.
 $initials = '';
 foreach (preg_split('/\s+/', trim($orgName)) as $w) { if ($w !== '') { $initials .= mb_strtoupper(mb_substr($w, 0, 1)); } if (mb_strlen($initials) >= 2) break; }
@@ -432,6 +467,37 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
     </header>
 
     <main class="cc-body">
+
+        <?php /* Banners are gated on VERIFIED state, never the URL alone. */ ?>
+        <?php if ($LIVE && $connFlash === 'yes' && $connectReady): ?>
+        <div class="cc-flash ok" role="status">
+            <b>&#10003; Your bank is connected — payouts are ACTIVE.</b>
+            <span>Stripe has verified your account. From this moment, every payment for your events settles directly to <b>your</b> bank account on Stripe&rsquo;s normal payout schedule. Prove it to yourself with the $1 test in Settings &rarr; Payment account.</span>
+        </div>
+        <?php elseif ($LIVE && $connFlash === 'pending' && !empty($caState['stripe_account_id'])): ?>
+        <div class="cc-flash warn" role="status">
+            <b>Almost there — Stripe needs a little more information.</b>
+            <span>Your account is created but not fully verified yet. Open Settings &rarr; Payment account and press <b>Continue set-up</b> to finish (it usually takes under 5 minutes).</span>
+        </div>
+        <?php elseif ($LIVE && $connFlash === 'restricted'): ?>
+        <div class="cc-flash warn" role="status">
+            <b>Stripe paused your account set-up.</b>
+            <span>Something needs attention (usually an identity document). Press <b>Continue set-up</b> in Settings &rarr; Payment account and Stripe will show you exactly what&rsquo;s missing.</span>
+        </div>
+        <?php elseif ($LIVE && $connFlash === 'error'): ?>
+        <div class="cc-flash warn" role="status"><b>We couldn&rsquo;t reach Stripe just now.</b><span>Nothing was lost — try Connect again from Settings &rarr; Payment account.</span></div>
+        <?php endif; ?>
+        <?php if ($LIVE && $payFlash === 'paid'): ?>
+        <div class="cc-flash ok" role="status">
+            <b>&#10003; $1 test payment SUCCEEDED — real money is in your account.</b>
+            <span><?php echo $payRoute === 'connect'
+                ? 'The dollar settled to your connected Stripe balance and will arrive in your bank with your next payout. Your money path is proven end to end.'
+                : 'The dollar landed in your own Stripe account. Your money path is proven end to end.'; ?>
+                (Feel free to refund it from your Stripe dashboard.)</span>
+        </div>
+        <?php elseif ($LIVE && $payFlash === 'unpaid'): ?>
+        <div class="cc-flash warn" role="status"><b>The $1 test wasn&rsquo;t completed.</b><span>No charge was made. Run it again from Settings &rarr; Payment account whenever you like.</span></div>
+        <?php endif; ?>
 
         <!-- Dashboard -->
         <section class="cc-panel active" data-panel="dashboard" aria-label="Dashboard">
@@ -808,29 +874,73 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
             <div class="cc-panel-head"><h1>Settings &amp; Account</h1><p>Payouts, your team, and event details.</p></div>
             <div class="cc-settings">
                 <?php if ($LIVE): ?>
-                <div class="cc-card" data-stripe-card data-event-id="<?php echo (int)$selEventId; ?>">
+                <div class="cc-card" data-stripe-card data-event-id="<?php echo (int)$selEventId; ?>" data-org-id="<?php echo (int)$orgId; ?>">
                     <div class="cc-card-head"><h3>Payment account</h3>
-                        <?php if ($ownStripe): ?><span class="cc-tag ok">Your Stripe</span><?php else: ?><span class="cc-tag warn">Platform account</span><?php endif; ?>
+                        <?php if ($connectReady): ?><span class="cc-tag ok">Bank connected</span>
+                        <?php elseif ($ownStripe): ?><span class="cc-tag ok">Your Stripe</span>
+                        <?php elseif (!empty($caState['stripe_account_id'])): ?><span class="cc-tag warn">Set-up in progress</span>
+                        <?php else: ?><span class="cc-tag warn">Not connected</span><?php endif; ?>
                     </div>
-                    <?php if ($ownStripe): ?>
-                        <p class="cc-stripe-status">Payments for <b><?php echo $e($ev['event']); ?></b> go directly to <b>your</b> Stripe account
-                            (<?php echo $e($stripeCfg['stripe_account_id'] ?: 'connected'); ?> &middot; <?php echo $e(substr((string)$stripeCfg['stripe_key_publishable'], 0, 12)); ?>&hellip;).
-                            Payouts land in your bank on your Stripe payout schedule.</p>
+
+                    <?php if ($connectReady): ?>
+                        <!-- STATE: Connect complete — payouts active -->
+                        <p class="cc-stripe-status"><b>&#10003; Your bank is connected and payouts are active.</b>
+                            Every payment for your events goes straight to your Stripe balance
+                            (<?php echo $e($caState['stripe_account_id']); ?>) and pays out to your bank automatically.
+                            <?php if (empty($caState['stripe_payouts_enabled'])): ?><b>Note:</b> payouts are still being verified by Stripe — charges work now; bank payouts unlock shortly.<?php endif; ?></p>
+                        <button class="cc-btn cc-btn-primary" type="button" data-paytest>Send yourself a $1 test payment</button>
+                        <button class="cc-btn" type="button" data-connect-dash>Open your Stripe dashboard</button>
+                        <p class="cc-stripe-note">The $1 test runs through the exact same pipeline as a real bidder payment — when it shows up in your balance, your money path is proven with real money. Refund it afterwards if you like.</p>
+
+                    <?php elseif (!empty($caState['stripe_account_id'])): ?>
+                        <!-- STATE: Connect started, not finished -->
+                        <p class="cc-stripe-status"><b>Your Stripe set-up is <?php echo $e($caState['stripe_onboarding_status'] === 'restricted' ? 'paused — Stripe needs something from you' : 'almost done'); ?>.</b>
+                            Press the button below and Stripe will show you exactly what&rsquo;s left (usually an ID or bank detail). Your progress is saved.</p>
+                        <button class="cc-btn cc-btn-primary" type="button" data-connect-start>Continue set-up &rarr;</button>
+
+                    <?php elseif ($ownStripe): ?>
+                        <!-- STATE: BYO keys connected -->
+                        <p class="cc-stripe-status"><b>&#10003; Connected to your own Stripe account.</b> Payments for <b><?php echo $e($ev['event']); ?></b> go directly to
+                            your Stripe (<?php echo $e($stripeCfg['stripe_account_id'] ?: 'verified'); ?> &middot; <?php echo $e(substr((string)$stripeCfg['stripe_key_publishable'], 0, 12)); ?>&hellip;),
+                            and pay out to your bank on your Stripe schedule.</p>
+                        <button class="cc-btn cc-btn-primary" type="button" data-paytest>Send yourself a $1 test payment</button>
                         <a class="cc-btn" href="https://dashboard.stripe.com" target="_blank" rel="noopener">Open your Stripe dashboard</a>
                         <button class="cc-btn" type="button" data-stripe-disconnect>Disconnect</button>
+
                     <?php else: ?>
-                        <p class="cc-stripe-status"><b>Heads up:</b> until you connect your own Stripe account, card payments for this event are
-                            collected by the Silent Bid Pro platform account and passed on to you manually. Connecting your own account sends
-                            every payment <b>straight to you</b>, with payouts to your bank on Stripe&rsquo;s normal schedule.</p>
-                        <ol class="cc-stripe-steps">
-                            <li>Create (or sign in to) a free Stripe account at <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener">stripe.com</a>.</li>
-                            <li>Open <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Developers &rarr; API keys</a> in your Stripe dashboard.</li>
-                            <li>Copy the <b>Publishable key</b> (starts with <code>pk_live_</code>) and the <b>Secret key</b> (starts with <code>sk_live_</code>).</li>
-                            <li>Paste them below and press Connect. We verify them with Stripe before anything is saved.</li>
-                        </ol>
-                        <label class="cc-field"><span>Publishable key</span><input type="text" data-stripe-pk placeholder="pk_live_..." autocomplete="off" spellcheck="false"></label>
-                        <label class="cc-field"><span>Secret key</span><input type="password" data-stripe-sk placeholder="sk_live_..." autocomplete="off"></label>
-                        <button class="cc-btn cc-btn-primary" type="button" data-stripe-connect>Connect my Stripe account</button>
+                        <!-- STATE: nothing connected yet -->
+                        <p class="cc-stripe-status"><b>Where should your auction money go?</b> Right now, card payments for this event are collected
+                            by the Silent Bid Pro platform account and passed to you manually. Connect your own account and every dollar goes
+                            <b>straight to your bank</b> — automatically.</p>
+
+                        <?php if ($connectAvail): ?>
+                        <div class="cc-connect-hero">
+                            <h4>Recommended &middot; takes about 5 minutes</h4>
+                            <p>One button. Stripe — the payment company trusted by millions of businesses — walks you through it step by step. Nothing technical, no codes to copy.</p>
+                            <ul class="cc-connect-need">
+                                <li><b>Have these ready:</b></li>
+                                <li>&#9312; Your organization&rsquo;s legal name (and EIN if you have one)</li>
+                                <li>&#9313; The name and date of birth of a person who represents it</li>
+                                <li>&#9314; Your bank account &amp; routing numbers (a check or your banking app has both)</li>
+                            </ul>
+                            <button class="cc-btn cc-btn-primary cc-btn-lgx" type="button" data-connect-start>Connect payouts with Stripe &rarr;</button>
+                            <p class="cc-stripe-note">You&rsquo;ll hop to Stripe&rsquo;s secure page and come right back here. We never see your bank details — Stripe holds them. When you return, you&rsquo;ll get a clear green confirmation, and you can prove the whole path with a $1 test payment.</p>
+                        </div>
+                        <details class="cc-connect-alt">
+                            <summary>Advanced: I already run my own Stripe account and want to use its API keys</summary>
+                        <?php else: ?>
+                        <div class="cc-connect-alt-open">
+                        <?php endif; ?>
+                            <ol class="cc-stripe-steps">
+                                <li>Create (or sign in to) a free Stripe account at <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener">stripe.com</a>.</li>
+                                <li>Open <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Developers &rarr; API keys</a> in your Stripe dashboard.</li>
+                                <li>Copy the <b>Publishable key</b> (starts with <code>pk_live_</code>) and the <b>Secret key</b> (starts with <code>sk_live_</code>).</li>
+                                <li>Paste them below and press Connect. We verify them with Stripe before anything is saved.</li>
+                            </ol>
+                            <label class="cc-field"><span>Publishable key</span><input type="text" data-stripe-pk placeholder="pk_live_..." autocomplete="off" spellcheck="false"></label>
+                            <label class="cc-field"><span>Secret key</span><input type="password" data-stripe-sk placeholder="sk_live_..." autocomplete="off"></label>
+                            <button class="cc-btn cc-btn-primary" type="button" data-stripe-connect>Connect my Stripe account</button>
+                        <?php if ($connectAvail): ?></details><?php else: ?></div><?php endif; ?>
                     <?php endif; ?>
                     <span class="cc-form-msg" data-stripe-msg></span>
                 </div>
@@ -1108,11 +1218,29 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
         });
     });
 
-    // Payment account: connect / disconnect the org's own Stripe keys.
+    // Payment account: Connect onboarding, $1 test, dashboard, BYO keys.
     var sc = document.querySelector('[data-stripe-card]');
     if (sc) {
         var scMsg = sc.querySelector('[data-stripe-msg]');
         var scEvent = parseInt(sc.getAttribute('data-event-id'), 10);
+        var scOrg = parseInt(sc.getAttribute('data-org-id'), 10);
+
+        // Redirect-style actions share one shape: POST -> { url } -> go.
+        function goAction(btn, url, busyText) {
+            btn.addEventListener('click', function () {
+                btn.disabled = true; scMsg.textContent = busyText;
+                postJSON(url, { org_id: scOrg }).then(function (res) {
+                    if (res.ok && res.d.status === 'ok' && res.d.url) { location.href = res.d.url; }
+                    else { btn.disabled = false; scMsg.textContent = (res.d && res.d.message) || 'Something went wrong — try again.'; }
+                }).catch(function () { btn.disabled = false; scMsg.textContent = 'Something went wrong — try again.'; });
+            });
+        }
+        var cs = sc.querySelector('[data-connect-start]');
+        if (cs) goAction(cs, 'api/admin/connect-start.php', 'Taking you to Stripe’s secure set-up…');
+        var pt = sc.querySelector('[data-paytest]');
+        if (pt) goAction(pt, 'api/admin/connect-test-payment.php', 'Creating your $1 test…');
+        var cd = sc.querySelector('[data-connect-dash]');
+        if (cd) goAction(cd, 'api/admin/connect-dashboard.php', 'Opening your Stripe dashboard…');
         var connect = sc.querySelector('[data-stripe-connect]');
         if (connect) connect.addEventListener('click', function () {
             var pk = sc.querySelector('[data-stripe-pk]').value.trim();

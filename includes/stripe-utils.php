@@ -140,6 +140,15 @@ function createCheckoutSession($item_id, $user_id, $amount, $item_title, $user_e
             'metadata[event_name]' => $event_name
         ];
 
+        // Connect routing: when the org has a connected Stripe account (and the
+        // event has no BYO keys), settle this payment straight to them.
+        require_once __DIR__ . '/connect.php';
+        $connect_dest = eventConnectDestination((int)$event_id);
+        if ($connect_dest) {
+            $session_data['payment_intent_data[on_behalf_of]'] = $connect_dest;
+            $session_data['payment_intent_data[transfer_data][destination]'] = $connect_dest;
+        }
+
         // Create Stripe checkout session via API using event-specific keys
         $response = callStripeAPI('/v1/checkout/sessions', $session_data, 'POST', $secret_key);
 
@@ -242,6 +251,15 @@ function createCombinedCheckoutSession($user_id, $event_id) {
                 [$line_amount, (int)$r['tx_id']]);
         }
         $session_data['metadata[transaction_ids]'] = implode(',', $tx_ids);
+
+        // Connect routing: settle combined checkout to the org's connected
+        // account when configured (no-op for BYO-key events).
+        require_once __DIR__ . '/connect.php';
+        $connect_dest = eventConnectDestination((int)$event_id);
+        if ($connect_dest) {
+            $session_data['payment_intent_data[on_behalf_of]'] = $connect_dest;
+            $session_data['payment_intent_data[transfer_data][destination]'] = $connect_dest;
+        }
 
         $response = callStripeAPI('/v1/checkout/sessions', $session_data, 'POST', $stripe_keys['secret_key']);
         if (empty($response['id'])) {

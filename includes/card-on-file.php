@@ -267,6 +267,15 @@ function autoChargeWinner($user_id, $event_id) {
         'metadata[organization]' => $org_name
     ];
 
+    // Connect routing: auto-charges settle straight to the org's connected
+    // Stripe account when configured (no-op for BYO-key events).
+    require_once __DIR__ . '/connect.php';
+    $connect_dest = eventConnectDestination((int)$event_id);
+    if ($connect_dest) {
+        $pi_data['on_behalf_of'] = $connect_dest;
+        $pi_data['transfer_data[destination]'] = $connect_dest;
+    }
+
     // Idempotency: same winner + same set of transactions + same attempt
     // count can never create two live charges.
     $attempt = (int)dbGetValue("SELECT MAX(auto_charge_attempts) FROM transactions WHERE id = ?", [$tx_ids[0]]);
