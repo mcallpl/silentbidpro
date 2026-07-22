@@ -18,12 +18,6 @@ if (!$admin) {
     die(json_encode(['status' => 'error', 'message' => 'Not authenticated']));
 }
 
-// Super admin only
-if (!$admin['is_super_admin']) {
-    http_response_code(403);
-    die(json_encode(['status' => 'error', 'message' => 'Only super admins can view Stripe settings']));
-}
-
 $event_id = (int)($_GET['event_id'] ?? 0);
 if (!$event_id) {
     http_response_code(400);
@@ -31,11 +25,15 @@ if (!$event_id) {
 }
 
 // Verify event exists
-$event = dbGetRow("SELECT id, name FROM events WHERE id = ?", [(int)$event_id]);
+$event = dbGetRow("SELECT id, name, organization_id FROM events WHERE id = ?", [(int)$event_id]);
 if (!$event) {
     http_response_code(404);
     die(json_encode(['status' => 'error', 'message' => 'Event not found']));
 }
+
+// AUTHORIZATION: super admin, or a manager of the org that owns this event
+// (the secret key is masked in the response either way). Dies 403 on failure.
+requireAdminOrgAccess((int)$event['organization_id']);
 
 // Get Stripe settings for this event
 $settings = dbGetRow(

@@ -279,6 +279,13 @@ if ($sel && !empty($sel['auction_end_time'])) {
     if ($t !== false) { $endEpoch = max(0, $t); }
 }
 
+// Payment account for the selected event: the org's own Stripe keys, or the
+// platform account fallback (see getEventStripeKeys()).
+$stripeCfg = $selEventId ? dbGetRow(
+    "SELECT stripe_account_id, stripe_key_publishable FROM event_settings WHERE event_id = ?",
+    [$selEventId]) : null;
+$ownStripe = !empty($stripeCfg['stripe_key_publishable']);
+
 // The same $ev shape the template renders in demo mode.
 $initials = '';
 foreach (preg_split('/\s+/', trim($orgName)) as $w) { if ($w !== '') { $initials .= mb_strtoupper(mb_substr($w, 0, 1)); } if (mb_strlen($initials) >= 2) break; }
@@ -801,12 +808,31 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
             <div class="cc-panel-head"><h1>Settings &amp; Account</h1><p>Payouts, your team, and event details.</p></div>
             <div class="cc-settings">
                 <?php if ($LIVE): ?>
-                <div class="cc-card">
-                    <div class="cc-card-head"><h3>Payments</h3><span class="cc-tag ok">Stripe</span></div>
-                    <div class="cc-row"><span class="lab">Processor<span>Card payments &amp; receipts</span></span><span class="cc-set-val">Stripe</span></div>
-                    <div class="cc-row"><span class="lab">Payment mode<span>For the selected event</span></span><span class="cc-set-val"><?php echo $e(ucfirst((string)($sel['payment_mode'] ?? 'standard'))); ?></span></div>
-                    <div class="cc-row"><span class="lab">Payout details<span>Managed in your Stripe account</span></span><span class="cc-set-val">stripe.com</span></div>
-                    <a class="cc-btn" href="https://dashboard.stripe.com" target="_blank" rel="noopener">Open Stripe dashboard</a>
+                <div class="cc-card" data-stripe-card data-event-id="<?php echo (int)$selEventId; ?>">
+                    <div class="cc-card-head"><h3>Payment account</h3>
+                        <?php if ($ownStripe): ?><span class="cc-tag ok">Your Stripe</span><?php else: ?><span class="cc-tag warn">Platform account</span><?php endif; ?>
+                    </div>
+                    <?php if ($ownStripe): ?>
+                        <p class="cc-stripe-status">Payments for <b><?php echo $e($ev['event']); ?></b> go directly to <b>your</b> Stripe account
+                            (<?php echo $e($stripeCfg['stripe_account_id'] ?: 'connected'); ?> &middot; <?php echo $e(substr((string)$stripeCfg['stripe_key_publishable'], 0, 12)); ?>&hellip;).
+                            Payouts land in your bank on your Stripe payout schedule.</p>
+                        <a class="cc-btn" href="https://dashboard.stripe.com" target="_blank" rel="noopener">Open your Stripe dashboard</a>
+                        <button class="cc-btn" type="button" data-stripe-disconnect>Disconnect</button>
+                    <?php else: ?>
+                        <p class="cc-stripe-status"><b>Heads up:</b> until you connect your own Stripe account, card payments for this event are
+                            collected by the Silent Bid Pro platform account and passed on to you manually. Connecting your own account sends
+                            every payment <b>straight to you</b>, with payouts to your bank on Stripe&rsquo;s normal schedule.</p>
+                        <ol class="cc-stripe-steps">
+                            <li>Create (or sign in to) a free Stripe account at <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener">stripe.com</a>.</li>
+                            <li>Open <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Developers &rarr; API keys</a> in your Stripe dashboard.</li>
+                            <li>Copy the <b>Publishable key</b> (starts with <code>pk_live_</code>) and the <b>Secret key</b> (starts with <code>sk_live_</code>).</li>
+                            <li>Paste them below and press Connect. We verify them with Stripe before anything is saved.</li>
+                        </ol>
+                        <label class="cc-field"><span>Publishable key</span><input type="text" data-stripe-pk placeholder="pk_live_..." autocomplete="off" spellcheck="false"></label>
+                        <label class="cc-field"><span>Secret key</span><input type="password" data-stripe-sk placeholder="sk_live_..." autocomplete="off"></label>
+                        <button class="cc-btn cc-btn-primary" type="button" data-stripe-connect>Connect my Stripe account</button>
+                    <?php endif; ?>
+                    <span class="cc-form-msg" data-stripe-msg></span>
                 </div>
                 <?php else: ?>
                 <div class="cc-card">
@@ -1081,6 +1107,36 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                 }).catch(function () { btn.disabled = false; });
         });
     });
+
+    // Payment account: connect / disconnect the org's own Stripe keys.
+    var sc = document.querySelector('[data-stripe-card]');
+    if (sc) {
+        var scMsg = sc.querySelector('[data-stripe-msg]');
+        var scEvent = parseInt(sc.getAttribute('data-event-id'), 10);
+        var connect = sc.querySelector('[data-stripe-connect]');
+        if (connect) connect.addEventListener('click', function () {
+            var pk = sc.querySelector('[data-stripe-pk]').value.trim();
+            var skKey = sc.querySelector('[data-stripe-sk]').value.trim();
+            if (!pk || !skKey) { scMsg.textContent = 'Both keys are required.'; return; }
+            connect.disabled = true; scMsg.textContent = 'Verifying with Stripe…';
+            postJSON('api/admin/update-event-stripe-settings.php', {
+                event_id: scEvent, stripe_key_publishable: pk, stripe_key_secret: skKey
+            }).then(function (res) {
+                if (res.ok && res.d.status === 'ok') { scMsg.textContent = 'Connected! Reloading…'; setTimeout(function () { location.reload(); }, 700); }
+                else { connect.disabled = false; scMsg.textContent = (res.d && res.d.message) || 'Could not connect.'; }
+            }).catch(function () { connect.disabled = false; scMsg.textContent = 'Could not connect.'; });
+        });
+        var disc = sc.querySelector('[data-stripe-disconnect]');
+        if (disc) disc.addEventListener('click', function () {
+            disc.disabled = true; scMsg.textContent = 'Disconnecting…';
+            postJSON('api/admin/update-event-stripe-settings.php', {
+                event_id: scEvent, stripe_key_publishable: '', stripe_key_secret: '', stripe_account_id: ''
+            }).then(function (res) {
+                if (res.ok && res.d.status === 'ok') { location.reload(); }
+                else { disc.disabled = false; scMsg.textContent = (res.d && res.d.message) || 'Could not disconnect.'; }
+            }).catch(function () { disc.disabled = false; scMsg.textContent = 'Could not disconnect.'; });
+        });
+    }
 
     // Event details save (name, date, fundraising goal).
     var ef = document.querySelector('[data-event-form]');

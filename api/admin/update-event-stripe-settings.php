@@ -19,12 +19,6 @@ if (!$admin) {
     die(json_encode(['status' => 'error', 'message' => 'Not authenticated']));
 }
 
-// Super admin only
-if (!$admin['is_super_admin']) {
-    http_response_code(403);
-    die(json_encode(['status' => 'error', 'message' => 'Only super admins can configure Stripe settings']));
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     die(json_encode(['status' => 'error', 'message' => 'Method not allowed']));
@@ -43,11 +37,17 @@ if (!$event_id) {
 }
 
 // Verify event exists
-$event = dbGetRow("SELECT id FROM events WHERE id = ?", [(int)$event_id]);
+$event = dbGetRow("SELECT id, organization_id FROM events WHERE id = ?", [(int)$event_id]);
 if (!$event) {
     http_response_code(404);
     die(json_encode(['status' => 'error', 'message' => 'Event not found']));
 }
+
+// AUTHORIZATION: super admin, or a manager of the org that owns this event.
+// Organizers connect THEIR OWN Stripe account to THEIR OWN event — the
+// cross-tenant danger (pointing someone else's event at your Stripe) is
+// blocked by the org-scope check. Dies 403 on failure.
+requireAdminOrgAccess((int)$event['organization_id']);
 
 // Get input values
 $stripe_account_id = trim($input['stripe_account_id'] ?? '');
@@ -96,6 +96,27 @@ if (!preg_match('/^sk_/', $stripe_key_secret)) {
     http_response_code(400);
     die(json_encode(['status' => 'error', 'message' => 'Invalid secret key format (must start with sk_)']));
 }
+
+// Both keys must be the same mode — a live pk with a test sk (or vice versa)
+// makes Stripe.js and the server disagree and every payment fails.
+$pk_live = (bool)preg_match('/^pk_live_/', $stripe_key_publishable);
+$sk_live = (bool)preg_match('/^sk_live_/', $stripe_key_secret);
+if ($pk_live !== $sk_live) {
+    http_response_code(400);
+    die(json_encode(['status' => 'error', 'message' => 'Key mismatch: one key is live mode and the other is test mode. Both must come from the same mode.']));
+}
+
+// Verify the secret key actually works before we store it — a typo here
+// would silently break every checkout for this event.
+require_once __DIR__ . '/../../includes/stripe-utils.php';
+$acct = callStripeAPI('/v1/account', [], 'GET', $stripe_key_secret);
+if (empty($acct['id'])) {
+    $why = $acct['error']['message'] ?? 'Stripe rejected the secret key';
+    http_response_code(400);
+    die(json_encode(['status' => 'error', 'message' => 'Could not verify the secret key with Stripe: ' . $why]));
+}
+// Record the verified Stripe account id (authoritative — not user-supplied).
+$stripe_account_id = $acct['id'];
 
 // Check if event_settings record exists
 $settings = dbGetRow(

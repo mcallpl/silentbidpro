@@ -496,3 +496,7 @@ body.cc {
 .cc-createform-err { color: var(--cc-warn); font-size: 0.82rem; margin: 10px 0 0; }
 .cc-form-msg { display: inline-block; margin-left: 12px; font-size: 0.8rem; color: var(--cc-muted); }
 .cc-side-foot .cc-back { display: block; margin-bottom: 6px; }
+.cc-stripe-status { font-size: 0.86rem; color: var(--cc-text); line-height: 1.55; margin: 0 0 12px; }
+.cc-stripe-steps { font-size: 0.84rem; color: var(--cc-muted); line-height: 1.6; margin: 0 0 14px; padding-left: 18px; }
+.cc-stripe-steps a { color: var(--cc-green-2); font-weight: 600; }
+.cc-stripe-steps code { background: var(--cc-off); border: 1px solid var(--cc-line); border-radius: 4px; padding: 1px 4px; font-size: 0.9em; }
