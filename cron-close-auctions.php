@@ -4,6 +4,14 @@
 // Run every minute via cron: * * * * * cd /var/www/html/silentbidpro && php cron-close-auctions.php
 // ============================================================
 
+// CLI ONLY — closing triggers winner card charges; an unauthenticated HTTP
+// request must never be able to invoke it (standing rule since the 2026-07-04
+// incident: operational scripts refuse the web).
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('Forbidden');
+}
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/db-helpers.php';
 require_once __DIR__ . '/includes/auction-closer.php';
