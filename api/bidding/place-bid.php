@@ -69,6 +69,10 @@ if ($pinned_event_id) {
 // demo/App-Review account is exempt (see isDemoUser).
 require_once __DIR__ . '/../../includes/card-on-file.php';
 $gate_event_id = (int)dbGetValue("SELECT event_id FROM items WHERE id = ?", [(int)$item_id]);
+
+// Membership: bidding in an auction bonds you to it (user_events junction).
+touchUserEvent((int)$user['id'], $gate_event_id);
+
 if (cardRequiredButMissing($user, $gate_event_id)) {
     http_response_code(402);
     die(json_encode([

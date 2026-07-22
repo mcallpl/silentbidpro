@@ -204,4 +204,35 @@ function getEffectiveItemCloseTime($item, $event = null) {
 
     return $event['auction_end_time'] ?? '';
 }
-?>
+
+/**
+ * Record (or refresh) a bidder's membership in an event — the durable
+ * user<->event bond (user_events junction, migration 013). Idempotent;
+ * touches last_active_at on repeat calls.
+ */
+function touchUserEvent($user_id, $event_id) {
+    $user_id = (int)$user_id; $event_id = (int)$event_id;
+    if (!$user_id || !$event_id) return;
+    dbQuery(
+        "INSERT INTO user_events (user_id, event_id)
+         VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE last_active_at = NOW()",
+        [$user_id, $event_id]
+    );
+}
+
+/**
+ * Every event this bidder belongs to, freshest first: open events, then
+ * drafts (private, link-only events they were invited into), then closed.
+ * Powers the sign-in event chooser and welcome-back routing.
+ */
+function getUserEvents($user_id) {
+    return dbGetAll(
+        "SELECT e.id, e.slug, e.name, e.status, ue.first_joined_at, ue.last_active_at
+         FROM user_events ue
+         JOIN events e ON e.id = ue.event_id
+         WHERE ue.user_id = ?
+         ORDER BY FIELD(e.status, 'open', 'draft', 'closed'), ue.last_active_at DESC",
+        [(int)$user_id]
+    ) ?: [];
+}

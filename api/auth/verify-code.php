@@ -132,6 +132,36 @@ dbInsert(
     ['LOGIN_SUCCESS', (int)$user_id, 'User logged in via SMS verification']
 );
 
+// Membership (user_events): bond this login to an auction, carefully —
+//  - an EXPLICIT entry link (client passes the ?event= slug) always bonds;
+//  - otherwise a first-ever login bonds to the session's pinned event so
+//    every bidder has a home auction;
+//  - but a RETURNING bidder at the bare homepage is NOT auto-enrolled in
+//    the default open event — their real memberships route them home.
+// (Bidding always bonds too, in place-bid.php.)
+require_once __DIR__ . '/../../includes/events.php';
+$entry_slug = trim((string)($input['event'] ?? ''));
+if ($entry_slug !== '') {
+    $entry = getEventBySlug($entry_slug);
+    if ($entry) {
+        touchUserEvent((int)$user['id'], (int)$entry['id']);
+        if (session_status() === PHP_SESSION_NONE) { session_start(); }
+        $_SESSION['bidder_event_id'] = (int)$entry['id'];
+    }
+}
+$my_events = getUserEvents((int)$user['id']);
+if (!$my_events) {
+    $pinned = getCurrentEvent();
+    if ($pinned) {
+        touchUserEvent((int)$user['id'], (int)$pinned['id']);
+        $my_events = getUserEvents((int)$user['id']);
+    }
+}
+$my_events = array_map(
+    fn($ev) => ['slug' => $ev['slug'], 'name' => $ev['name'], 'status' => $ev['status']],
+    $my_events
+);
+
 http_response_code(200);
 echo json_encode([
     'status' => 'ok',
@@ -142,7 +172,8 @@ echo json_encode([
         'phone_number' => $user['phone_number'],
         'full_name' => $user['full_name'],
         'email' => $user['email'] ?? ''
-    ]
+    ],
+    'events' => $my_events
 ]);
 
 ?>

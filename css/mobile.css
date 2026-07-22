@@ -594,3 +594,10 @@ a:focus {
         }
     }
 }
+
+/* ---- "You're joining" banner on the bidder sign-in ---- */
+.joining-banner { display: flex; flex-direction: column; gap: 2px; text-align: center; background: var(--event-brand-primary, #315fcb); color: #fff; border-radius: 14px; padding: 14px 18px; margin: 0 0 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+.joining-label { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; font-weight: 600; }
+.joining-event { font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
+.joining-org { font-size: 0.8rem; opacity: 0.9; }
+.event-chooser select.form-input { width: 100%; }

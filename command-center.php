@@ -151,7 +151,7 @@ $goalSet = $goalAmt !== null && $goalAmt > 0;
 // ---- Dashboard stats for the selected event ----
 $raisedN = $selEventId ? (float)dbGetValue("SELECT COALESCE(SUM(current_high_bid),0) FROM items WHERE event_id = ? AND current_high_bid > 0", [$selEventId]) : 0.0;
 $biddersN = $selEventId ? (int)dbGetValue("SELECT COUNT(DISTINCT b.user_id) FROM bids b JOIN items i ON i.id = b.item_id WHERE i.event_id = ?", [$selEventId]) : 0;
-$todayN = $selEventId ? (int)dbGetValue("SELECT COUNT(*) FROM users WHERE event_id = ? AND created_at >= CURDATE()", [$selEventId]) : 0;
+$todayN = $selEventId ? (int)dbGetValue("SELECT COUNT(*) FROM user_events WHERE event_id = ? AND first_joined_at >= CURDATE()", [$selEventId]) : 0;
 $itemsN = $selEventId ? (int)dbGetValue("SELECT COUNT(*) FROM items WHERE event_id = ?", [$selEventId]) : 0;
 $closingN = $selEventId ? (int)dbGetValue(
     "SELECT COUNT(*) FROM items WHERE event_id = ? AND is_closed = 0

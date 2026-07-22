@@ -180,11 +180,15 @@ SBB.Auth = {
         verifyCodeBtn.querySelector('.btn-spinner').style.display = 'inline';
 
         try {
+            const urlParams = new URLSearchParams(window.location.search);
             const response = await SBB.API.post('/api/auth/verify-code.php', {
                 phone: this.currentPhone,
                 full_name: this.currentName,
                 email: this.currentEmail,
-                code: code
+                code: code,
+                // The auction link they entered through — bonds their account
+                // to that event (user_events) on the server.
+                event: urlParams.get('event') || ''
             });
 
             if (response.status === 'ok') {
@@ -196,15 +200,28 @@ SBB.Auth = {
                     localStorage.setItem('user_email', response.user.email);
                 }
 
-                // Show success
-                this.showSuccessMessage();
+                // Route the bidder to THEIR auction:
+                //  - explicit ?event= link or return URL wins;
+                //  - one membership -> straight to that auction;
+                //  - several -> let them choose from a dropdown.
+                const params = new URLSearchParams(window.location.search);
+                const returnUrl = params.get('return');
+                const explicitEvent = params.get('event');
+                const myEvents = (response.events || []).filter(ev => ev.status !== 'closed');
 
-                // Redirect after 2 seconds to return URL or default item.
-                setTimeout(() => {
-                    const params = new URLSearchParams(window.location.search);
-                    const returnUrl = params.get('return');
-                    window.location.href = SBB.Utils.safeInternalPath(returnUrl, 'items.php');
-                }, 2000);
+                if (!returnUrl && !explicitEvent && myEvents.length > 1) {
+                    this.showEventChooser(myEvents);
+                } else {
+                    this.showSuccessMessage();
+                    setTimeout(() => {
+                        let dest = SBB.Utils.safeInternalPath(returnUrl, 'items.php');
+                        if (!returnUrl) {
+                            const slug = explicitEvent || (myEvents.length === 1 ? myEvents[0].slug : '');
+                            if (slug) dest = 'items.php?event=' + encodeURIComponent(slug);
+                        }
+                        window.location.href = dest;
+                    }, 2000);
+                }
             } else {
                 error.textContent = response.message || 'Invalid code';
                 error.style.display = 'block';
@@ -234,6 +251,34 @@ SBB.Auth = {
     showSuccessMessage() {
         document.getElementById('codeForm').style.display = 'none';
         document.getElementById('successMessage').style.display = 'block';
+    },
+
+    // Signed in and a member of several auctions with no explicit link:
+    // let them pick which one to enter (dropdown), then pin via ?event=.
+    showEventChooser(events) {
+        document.getElementById('codeForm').style.display = 'none';
+        const box = document.createElement('div');
+        box.className = 'auth-form event-chooser';
+        box.innerHTML =
+            '<h2>Welcome back!</h2>' +
+            '<p class="form-description">You&rsquo;re part of more than one auction. Which one are you joining today?</p>' +
+            '<div class="form-group">' +
+            '<label class="form-label" for="eventChooserSelect">Your auctions</label>' +
+            '<select id="eventChooserSelect" class="form-input"></select>' +
+            '</div>' +
+            '<button type="button" class="btn btn-primary btn-block" id="eventChooserGo">Enter auction</button>';
+        const sel = box.querySelector('#eventChooserSelect');
+        events.forEach(ev => {
+            const opt = document.createElement('option');
+            opt.value = ev.slug;
+            opt.textContent = ev.name + (ev.status === 'open' ? ' — live now' : '');
+            sel.appendChild(opt);
+        });
+        box.querySelector('#eventChooserGo').addEventListener('click', () => {
+            window.location.href = 'items.php?event=' + encodeURIComponent(sel.value);
+        });
+        const parent = document.getElementById('codeForm').parentNode;
+        parent.appendChild(box);
     }
 };
 

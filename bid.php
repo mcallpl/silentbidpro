@@ -7,11 +7,17 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/page-meta.php';
+require_once __DIR__ . '/includes/events.php';
 
 if (isAuthenticated()) {
     header('Location: items.php');
     exit;
 }
+
+// The auction this sign-in will join (?event= link, session pin, or the
+// open event) — displayed PROMINENTLY so a bidder always knows which
+// auction they are registering for before they type anything.
+$joining = getCurrentEvent();
 
 $page_title = APP_NAME . ' - Bidder Sign In';
 ?>
@@ -30,6 +36,16 @@ $page_title = APP_NAME . ' - Bidder Sign In';
                 <h1><?php echo htmlspecialchars(APP_NAME); ?></h1>
                 <p class="subtitle">Silent Auction Platform</p>
             </div>
+
+            <?php if ($joining): ?>
+            <div class="joining-banner" role="status">
+                <span class="joining-label">You&rsquo;re joining</span>
+                <span class="joining-event"><?php echo htmlspecialchars($joining['name']); ?></span>
+                <?php if (!empty($joining['organization_name'])): ?>
+                    <span class="joining-org">Hosted by <?php echo htmlspecialchars($joining['organization_name']); ?></span>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
 
             <div class="auth-form" id="phoneForm">
                 <h2>Sign Up to Bid</h2>
