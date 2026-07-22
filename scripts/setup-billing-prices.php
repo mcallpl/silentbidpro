@@ -27,7 +27,8 @@ $plans = [
     'enterprise' => ['lookup' => 'sbp_enterprise_monthly', 'vault' => 'vault_stripe_price_enterprise'],
 ];
 
-echo "Setting up Stripe Billing prices (mode: " . (strpos(STRIPE_SECRET_KEY, 'sk_live') === 0 ? 'LIVE' : 'test') . ")\n\n";
+// Live keys can be sk_live_ (secret) or rk_live_ (restricted).
+echo "Setting up Stripe Billing prices (mode: " . (preg_match('/^(sk|rk)_live_/', STRIPE_SECRET_KEY) ? 'LIVE' : 'test') . ")\n\n";
 
 $results = [];
 foreach ($plans as $plan => $cfg) {
