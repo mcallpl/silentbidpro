@@ -1,15 +1,29 @@
 <?php
 // ============================================================
-// SILENT BID PRO — Command Center (organizer console, demo)
+// SILENT BID PRO — Command Center (organizer console)
 // The organizer's home base: run the event (Dashboard, Items,
 // Bidders, Live Activity, Payments, Reports) AND set it up
 // (Branding, Subscription, Settings). Same layout doubles as the
 // iOS app (responsive: sidebar -> bottom tabs + sheet on phones).
-// Presentational — sample data, no real bidding/payments/auth.
-//   ?state=empty  -> brand-new-organizer empty state
+//
+// TWO MODES:
+//   LIVE — a signed-in organizer (admin session cookie) sees their
+//          real organization, events, bids, and payments.
+//   DEMO — everyone else (and ?demo=1) sees the sample-data tour.
+//   ?state=empty  -> brand-new-organizer empty state (demo only)
 // ============================================================
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/db-helpers.php';
+require_once __DIR__ . '/includes/admin-auth-middleware.php'; // getCurrentAdmin() etc. (do NOT also include admin-accounts.php — duplicate function names)
+require_once __DIR__ . '/includes/plans.php';
 
+$admin = isset($_GET['demo']) ? false : getCurrentAdmin();
+$LIVE  = (bool)$admin;
+
+if (!$LIVE):
+// ------------------------------------------------------------
+// DEMO MODE — sample data (the public marketing tour)
+// ------------------------------------------------------------
 $EVENTS = [
     'spring' => [
         'event' => 'Spring Gala Silent Auction', 'org' => 'Greenfield Education Fund', 'initials' => 'GE',
@@ -87,11 +101,221 @@ $team = [
     ['name' => 'Kim McAllister',  'email' => 'kim@greenfieldfund.org',  'role' => 'Manager'],
     ['name' => 'Dana White',      'email' => 'dana@greenfieldfund.org', 'role' => 'Viewer'],
 ];
+$orgEvents = []; $selEventId = 0; $endEpoch = null; $goalSet = true; $orgId = 0;
+$sparkVals = [6, 11, 18, 24, 30, 38, 49, 60, 72, 88, 110, 142]; $sparkCap = 'Raised over time';
+$attMissingPhotos = 3;
+
+else:
+// ------------------------------------------------------------
+// LIVE MODE — the signed-in organizer's real data
+// ------------------------------------------------------------
+$orgs = getAdminAccessibleOrganizations($admin['id']) ?: [];
+$orgId = (int)($orgs[0]['id'] ?? 0);
+if (!$orgId) { $orgId = (int)($admin['organization_id'] ?? 0); }
+$orgRow = $orgId ? dbGetRow("SELECT id, name, slug, contact_email, brand_primary, brand_accent, logo_url FROM organizations WHERE id = ?", [$orgId]) : null;
+if (!$orgRow && !empty($admin['is_super_admin'])) {
+    $orgRow = dbGetRow("SELECT id, name, slug, contact_email, brand_primary, brand_accent, logo_url FROM organizations ORDER BY id LIMIT 1");
+    $orgId = (int)($orgRow['id'] ?? 0);
+}
+$orgName = $orgRow['name'] ?? 'Your Organization';
+
+// Events are scoped by ORGANIZATION (the organizer owns the whole org; a fresh
+// signup has no admin_events rows, so getAdminAccessibleEvents would be empty).
+$orgEvents = $orgId ? (dbGetAll(
+    "SELECT id, name, slug, status, event_date, auction_start_time, auction_end_time, payment_mode
+     FROM events WHERE organization_id = ? ORDER BY created_at DESC", [$orgId]) ?: []) : [];
+$isEmpty = empty($orgEvents);
+
+$selEventId = (int)($_GET['event'] ?? 0);
+$sel = null;
+foreach ($orgEvents as $oe) { if ((int)$oe['id'] === $selEventId) { $sel = $oe; break; } }
+if (!$sel && $orgEvents) { $sel = $orgEvents[0]; }
+$selEventId = $sel ? (int)$sel['id'] : 0;
+
+// Fundraising goal (migration 012; guarded so pre-migration prod never breaks).
+$goalAmt = null;
+if ($sel && dbColumnExists('events', 'fundraising_goal')) {
+    $goalAmt = dbGetValue("SELECT fundraising_goal FROM events WHERE id = ?", [$selEventId]);
+    $goalAmt = $goalAmt !== null ? (float)$goalAmt : null;
+}
+$goalSet = $goalAmt !== null && $goalAmt > 0;
+
+// ---- Dashboard stats for the selected event ----
+$raisedN = $selEventId ? (float)dbGetValue("SELECT COALESCE(SUM(current_high_bid),0) FROM items WHERE event_id = ? AND current_high_bid > 0", [$selEventId]) : 0.0;
+$biddersN = $selEventId ? (int)dbGetValue("SELECT COUNT(DISTINCT b.user_id) FROM bids b JOIN items i ON i.id = b.item_id WHERE i.event_id = ?", [$selEventId]) : 0;
+$todayN = $selEventId ? (int)dbGetValue("SELECT COUNT(*) FROM users WHERE event_id = ? AND created_at >= CURDATE()", [$selEventId]) : 0;
+$itemsN = $selEventId ? (int)dbGetValue("SELECT COUNT(*) FROM items WHERE event_id = ?", [$selEventId]) : 0;
+$closingN = $selEventId ? (int)dbGetValue(
+    "SELECT COUNT(*) FROM items WHERE event_id = ? AND is_closed = 0
+     AND COALESCE(close_time_override, auction_end_time) BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 1 HOUR)", [$selEventId]) : 0;
+$collectedN = $selEventId ? (float)dbGetValue(
+    "SELECT COALESCE(SUM(t.amount),0) FROM transactions t JOIN items i ON i.id = t.item_id
+     WHERE i.event_id = ? AND t.status = 'paid'", [$selEventId]) : 0.0;
+$attMissingPhotos = $selEventId ? (int)dbGetValue(
+    "SELECT COUNT(*) FROM items WHERE event_id = ? AND (image_url IS NULL OR image_url = '')", [$selEventId]) : 0;
+
+$pctN = $goalSet ? (int)round($raisedN / $goalAmt * 100) : null;
+$collectedPctN = $raisedN > 0 ? (int)round($collectedN / $raisedN * 100) : 0;
+
+// ---- Lists ----
+$items = [];
+foreach (($selEventId ? (dbGetAll(
+    "SELECT i.title, i.current_high_bid, i.starting_bid, i.is_closed,
+            COALESCE(i.close_time_override, i.auction_end_time) AS closes_at,
+            COALESCE(c.name, 'General') AS cat, COUNT(b.id) AS bid_count
+     FROM items i
+     LEFT JOIN categories c ON c.id = i.category_id
+     LEFT JOIN bids b ON b.item_id = i.id
+     WHERE i.event_id = ?
+     GROUP BY i.id, i.title, i.current_high_bid, i.starting_bid, i.is_closed, closes_at, cat
+     ORDER BY closes_at ASC", [$selEventId]) ?: []) : []) as $r) {
+    $closed = (int)$r['is_closed'] === 1 || strtotime((string)$r['closes_at']) <= time();
+    $soon = !$closed && strtotime((string)$r['closes_at']) - time() <= 3600;
+    $items[] = [
+        'name' => $r['title'], 'cat' => $r['cat'],
+        'bid' => number_format((float)($r['current_high_bid'] ?: $r['starting_bid'])),
+        'bids' => (int)$r['bid_count'],
+        'left' => $closed ? 'Closed' : cc_timeleft(strtotime((string)$r['closes_at'])),
+        'status' => $closed ? 'closed' : ($soon ? 'closing' : 'live'),
+    ];
+}
+
+$bidders = [];
+foreach (($selEventId ? (dbGetAll(
+    "SELECT u.id, COALESCE(NULLIF(u.full_name,''), u.phone_number) AS name,
+            COUNT(DISTINCT b.item_id) AS items_on,
+            (SELECT COALESCE(SUM(i2.current_high_bid),0) FROM items i2 WHERE i2.event_id = ? AND i2.current_high_bidder_id = u.id) AS leading_total,
+            (SELECT COUNT(*) FROM items i3 WHERE i3.event_id = ? AND i3.current_high_bidder_id = u.id) AS leading_count
+     FROM users u
+     JOIN bids b ON b.user_id = u.id
+     JOIN items i ON i.id = b.item_id AND i.event_id = ?
+     GROUP BY u.id, name
+     ORDER BY leading_total DESC, items_on DESC
+     LIMIT 25", [$selEventId, $selEventId, $selEventId]) ?: []) : []) as $r) {
+    $leads = (int)$r['leading_count'] > 0;
+    $bidders[] = [
+        'paddle' => (string)(int)$r['id'], 'name' => $r['name'],
+        'items' => (int)$r['items_on'], 'total' => number_format((float)$r['leading_total']),
+        'status' => $leads ? 'Leading' : 'Outbid', 'tone' => $leads ? 'ok' : 'warn',
+    ];
+}
+
+$activity = [];
+foreach (($selEventId ? (dbGetAll(
+    "SELECT b.bid_amount, b.created_at, i.title, COALESCE(NULLIF(u.full_name,''), u.phone_number) AS who
+     FROM bids b JOIN items i ON i.id = b.item_id JOIN users u ON u.id = b.user_id
+     WHERE i.event_id = ? ORDER BY b.created_at DESC LIMIT 8", [$selEventId]) ?: []) : []) as $r) {
+    $activity[] = ['t' => cc_ago(strtotime((string)$r['created_at'])), 'who' => $r['who'],
+                   'amt' => number_format((float)$r['bid_amount']), 'item' => $r['title']];
+}
+
+$payments = [];
+foreach (($selEventId ? (dbGetAll(
+    "SELECT t.amount, t.status, COALESCE(NULLIF(u.full_name,''), u.phone_number) AS who
+     FROM transactions t JOIN items i ON i.id = t.item_id JOIN users u ON u.id = t.user_id
+     WHERE i.event_id = ? AND t.status IN ('paid','pending','failed')
+     ORDER BY t.created_at DESC LIMIT 12", [$selEventId]) ?: []) : []) as $r) {
+    $map = ['paid' => ['Paid', 'ok'], 'pending' => ['Pending', 'warn'], 'failed' => ['Failed', 'warn']];
+    [$lab, $tone] = $map[$r['status']] ?? ['Pending', 'warn'];
+    $payments[] = ['who' => $r['who'], 'method' => 'Card &middot; Stripe', 'amt' => number_format((float)$r['amount']), 'status' => $lab, 'tone' => $tone];
+}
+
+// Sparkline: cumulative bid count per day (honest — we don't historize raised-$).
+$sparkVals = [0, 0]; $sparkCap = 'Bids over time';
+if ($selEventId) {
+    $rows = dbGetAll(
+        "SELECT DATE(b.created_at) d, COUNT(*) c FROM bids b JOIN items i ON i.id = b.item_id
+         WHERE i.event_id = ? GROUP BY DATE(b.created_at) ORDER BY d ASC", [$selEventId]) ?: [];
+    if ($rows) {
+        $cum = 0; $sparkVals = [];
+        foreach ($rows as $r) { $cum += (int)$r['c']; $sparkVals[] = $cum; }
+        if (count($sparkVals) === 1) { array_unshift($sparkVals, 0); }
+        $sparkVals = array_slice($sparkVals, -12);
+    }
+}
+
+$reports = [
+    ['name' => 'Financial Reconciliation', 'desc' => 'Every bid, payment, and payout in one ledger.'],
+    ['name' => 'Bidder Summary',           'desc' => 'Paddle numbers, contact info, and totals.'],
+    ['name' => 'Item Performance',         'desc' => 'Winning bids vs. retail value, by category.'],
+    ['name' => 'Tax Receipts',             'desc' => 'Donor receipts with fair-market breakdowns.'],
+];
+
+// Plans straight from the server-side catalog (single source of truth).
+$featCopy = [
+    'free'       => ['1 active event', 'Live bidding & payments', 'Item & guest management'],
+    'pro'        => ['3 active events', 'Custom branding', 'CSV exports', 'Big-screen mode', 'Priority support'],
+    'enterprise' => ['Unlimited events', 'Multi-chapter', 'API access', 'SSO', 'Dedicated success manager'],
+];
+$plans = [];
+foreach (planCatalog() as $pk => $pc) {
+    $plans[$pk] = [
+        'label' => $pc['label'],
+        'price' => '$' . number_format($pc['price_monthly_cents'] / 100),
+        'per'   => $pc['price_monthly_cents'] ? '/mo' : 'forever',
+        'feats' => $featCopy[$pk] ?? [],
+    ];
+}
+$currentPlan = getOrgPlan($orgId);
+
+$team = $orgId ? (dbGetAll(
+    "SELECT COALESCE(NULLIF(a.full_name,''), a.username) AS name, a.email, ao.role
+     FROM admin_organizations ao JOIN admin_accounts a ON a.id = ao.admin_id
+     WHERE ao.organization_id = ? ORDER BY FIELD(ao.role,'manager','viewer'), ao.id", [$orgId]) ?: []) : [];
+if (!$team) { $team = [['name' => $admin['full_name'] ?: $admin['username'], 'email' => $admin['email'] ?? '', 'role' => 'manager']]; }
+foreach ($team as &$tm) { $tm['role'] = ucfirst((string)$tm['role']); } unset($tm);
+
+$endEpoch = null;
+if ($sel && !empty($sel['auction_end_time'])) {
+    $t = strtotime((string)$sel['auction_end_time']);
+    if ($t !== false) { $endEpoch = max(0, $t); }
+}
+
+// The same $ev shape the template renders in demo mode.
+$initials = '';
+foreach (preg_split('/\s+/', trim($orgName)) as $w) { if ($w !== '') { $initials .= mb_strtoupper(mb_substr($w, 0, 1)); } if (mb_strlen($initials) >= 2) break; }
+$ev = [
+    'event'    => $sel['name'] ?? 'Your first auction',
+    'org'      => $orgName,
+    'initials' => $initials ?: 'SB',
+    'raised'   => number_format($raisedN),
+    'pct'      => $pctN,
+    'goal'     => $goalSet ? number_format($goalAmt) : null,
+    'bidders'  => $biddersN,
+    'today'    => $todayN,
+    'items'    => $itemsN,
+    'closing'  => $closingN,
+    'collected' => number_format($collectedN),
+    'collectedPct' => $collectedPctN,
+    'payout'   => 'Via Stripe',
+    'brand'    => $orgRow['brand_primary'] ?? '#12395F',
+    'font'     => 'Poppins',
+    'headline' => $sel['name'] ?? $orgName,
+    'tagline'  => $orgName,
+    'hero'     => 'images/items/web/org-gala.jpg',
+];
+$key = 'live';
+endif;
+
+// ---- Shared helpers (both modes) ----
+function cc_timeleft($ts) {
+    $s = max(0, $ts - time());
+    if ($s >= 86400) { return floor($s / 86400) . 'd ' . floor(($s % 86400) / 3600) . 'h'; }
+    if ($s >= 3600)  { return floor($s / 3600) . 'h ' . str_pad((string)floor(($s % 3600) / 60), 2, '0', STR_PAD_LEFT) . 'm'; }
+    return max(1, floor($s / 60)) . 'm';
+}
+function cc_ago($ts) {
+    $s = max(0, time() - $ts);
+    if ($s < 60) { return 'just now'; }
+    if ($s < 3600) { return floor($s / 60) . 'm ago'; }
+    if ($s < 86400) { return floor($s / 3600) . 'h ago'; }
+    return floor($s / 86400) . 'd ago';
+}
 
 $e = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
-$ownerName = $team[0]['name'] ?? 'there';
-$ownerFirst = explode(' ', $ownerName)[0];
-$bdark = function ($hex) { $hex = ltrim($hex, '#'); return sprintf('#%02x%02x%02x', (int)(hexdec(substr($hex, 0, 2)) * 0.5), (int)(hexdec(substr($hex, 2, 2)) * 0.5), (int)(hexdec(substr($hex, 4, 2)) * 0.5)); };
+$ownerName = $LIVE ? (($admin['full_name'] ?? '') !== '' ? $admin['full_name'] : $admin['username']) : ($team[0]['name'] ?? 'there');
+$ownerFirst = explode(' ', trim($ownerName))[0] ?: 'there';
+$bdark = function ($hex) { $hex = ltrim($hex, '#'); if (strlen($hex) !== 6) { return '#0a1a2f'; } return sprintf('#%02x%02x%02x', (int)(hexdec(substr($hex, 0, 2)) * 0.5), (int)(hexdec(substr($hex, 2, 2)) * 0.5), (int)(hexdec(substr($hex, 4, 2)) * 0.5)); };
 $navRun = ['dashboard' => 'Dashboard', 'items' => 'Items', 'bidders' => 'Bidders', 'activity' => 'Live Activity', 'payments' => 'Payments', 'reports' => 'Reports'];
 $navSet = ['branding' => 'Branding', 'subscription' => 'Subscription', 'settings' => 'Settings'];
 $fontQuery = str_replace(' ', '+', $ev['font']);
@@ -147,18 +371,34 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
             </button>
             <span class="cc-logo-m" aria-hidden="true"><img src="images/brand/silentbidpro-logo-dark.png" alt=""></span>
             <label class="cc-select">
-                <select aria-label="Select auction" onchange="if(this.value){location.href='command-center.php?brand='+this.value;}">
+                <?php if ($LIVE): ?>
+                <select aria-label="Select auction" onchange="if(this.value){location.href='command-center.php?event='+this.value;}">
+                    <?php if ($isEmpty): ?><option value="">No auctions yet</option><?php endif; ?>
+                    <?php foreach ($orgEvents as $oe): ?>
+                        <option value="<?php echo (int)$oe['id']; ?>"<?php echo (int)$oe['id'] === $selEventId ? ' selected' : ''; ?>><?php echo $e($oe['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php else: ?>
+                <select aria-label="Select auction" onchange="if(this.value){location.href='command-center.php?demo=1&brand='+this.value;}">
                     <?php foreach ($EVENTS as $k => $opt): ?>
                         <option value="<?php echo $e($k); ?>"<?php echo $k === $key ? ' selected' : ''; ?>><?php echo $e($opt['event']); ?></option>
                     <?php endforeach; ?>
                 </select>
+                <?php endif; ?>
             </label>
         </div>
         <div class="cc-top-right">
-            <a class="cc-statelink" href="command-center.php?brand=<?php echo $e($key); ?><?php echo $isEmpty ? '' : '&state=empty'; ?>"><?php echo $isEmpty ? 'View with sample data' : 'Preview new-org view'; ?></a>
-            <span class="cc-demo">Example &middot; sample data</span>
-            <?php if (!$isEmpty): ?><span class="cc-live"><span class="dot"></span>Live</span><?php endif; ?>
-            <span class="cc-admin"><span class="cc-avatar"><?php echo $e(strtoupper(substr($ownerName, 0, 1))); ?></span><?php echo $e($ownerFirst); ?></span>
+            <?php if ($LIVE): ?>
+                <?php if ($sel && ($sel['status'] ?? '') === 'open'): ?><span class="cc-live"><span class="dot"></span>Open</span><?php elseif ($sel): ?><span class="cc-demo"><?php echo $e(ucfirst((string)$sel['status'])); ?></span><?php endif; ?>
+                <a class="cc-statelink" href="#" data-signout>Sign out</a>
+                <span class="cc-admin"><span class="cc-avatar"><?php echo $e(strtoupper(substr($ownerName, 0, 1))); ?></span><?php echo $e($ownerFirst); ?></span>
+            <?php else: ?>
+                <a class="cc-statelink" href="command-center.php?demo=1&brand=<?php echo $e($key); ?><?php echo $isEmpty ? '' : '&state=empty'; ?>"><?php echo $isEmpty ? 'View with sample data' : 'Preview new-org view'; ?></a>
+                <span class="cc-demo">Example &middot; sample data</span>
+                <?php if (!$isEmpty): ?><span class="cc-live"><span class="dot"></span>Live</span><?php endif; ?>
+                <a class="cc-statelink strong" href="signup.php?mode=login">Sign in</a>
+                <span class="cc-admin"><span class="cc-avatar"><?php echo $e(strtoupper(substr($ownerName, 0, 1))); ?></span><?php echo $e($ownerFirst); ?></span>
+            <?php endif; ?>
         </div>
     </header>
 
@@ -179,35 +419,52 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                         <li><b>Invite your team</b><span>Give staff and volunteers the right access.</span></li>
                         <li><b>Open for bidding</b><span>Share the link or print QR codes for guests.</span></li>
                     </ol>
-                    <button class="cc-btn cc-btn-primary" type="button">Create your first auction</button>
+                    <?php if ($LIVE): ?>
+                    <form class="cc-createform" data-create-event>
+                        <label class="cc-field"><span>Event name</span><input type="text" name="name" required maxlength="255" placeholder="Spring Gala Silent Auction"></label>
+                        <label class="cc-field"><span>Event date</span><input type="date" name="event_date" required></label>
+                        <button class="cc-btn cc-btn-primary" type="submit">Create your first auction</button>
+                        <p class="cc-createform-err" data-create-err role="alert" hidden></p>
+                    </form>
+                    <?php else: ?>
+                    <a class="cc-btn cc-btn-primary" href="signup.php">Create your first auction</a>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php else: ?>
             <?php
                 $raisedN = (int)str_replace(',', '', $ev['raised']);
-                $goalN   = (int)str_replace(',', '', $ev['goal']);
+                $goalN   = $ev['goal'] !== null ? (int)str_replace(',', '', $ev['goal']) : null;
                 $collN   = (int)str_replace(',', '', $ev['collected']);
-                $diff    = $raisedN - $goalN;
+                $diff    = $goalN !== null ? $raisedN - $goalN : 0;
                 $outK    = round(($raisedN - $collN) / 1000);
-                $fill    = min((int)$ev['pct'], 100);
-                list($spLine, $spArea, $spEnd) = cc_spark([6, 11, 18, 24, 30, 38, 49, 60, 72, 88, 110, 142]);
+                $fill    = $ev['pct'] !== null ? min((int)$ev['pct'], 100) : ($raisedN > 0 ? 100 : 0);
+                list($spLine, $spArea, $spEnd) = cc_spark(count($sparkVals) >= 2 ? $sparkVals : [0, 0]);
             ?>
             <div class="cc-panel-head cc-greet">
                 <h1 data-greet data-name="<?php echo $e($ownerFirst); ?>">Welcome back, <?php echo $e($ownerFirst); ?></h1>
-                <p><b><?php echo $e($ev['headline']); ?></b> is <?php echo (int)$ev['pct'] >= 100 ? 'ahead of goal' : 'climbing toward goal'; ?> &mdash; <b>$<?php echo $e($ev['raised']); ?></b> raised (<?php echo (int)$ev['pct']; ?>%), 2 days left. <b><?php echo (int)$ev['closing']; ?> items</b> close within the hour.</p>
+                <?php if ($goalN !== null): ?>
+                <p><b><?php echo $e($ev['headline']); ?></b> is <?php echo (int)$ev['pct'] >= 100 ? 'ahead of goal' : 'climbing toward goal'; ?> &mdash; <b>$<?php echo $e($ev['raised']); ?></b> raised (<?php echo (int)$ev['pct']; ?>%). <b><?php echo (int)$ev['closing']; ?> items</b> close within the hour.</p>
+                <?php else: ?>
+                <p><b><?php echo $e($ev['headline']); ?></b> has raised <b>$<?php echo $e($ev['raised']); ?></b> so far. <b><?php echo (int)$ev['closing']; ?> items</b> close within the hour. <a href="#settings" data-panel-link="settings">Set a fundraising goal</a> to track progress.</p>
+                <?php endif; ?>
             </div>
 
             <!-- Hero progress -->
             <div class="cc-hero">
                 <div class="cc-hero-main">
                     <span class="cc-hero-label">Raised &middot; <?php echo $e($ev['event']); ?></span>
-                    <div class="cc-hero-amt"><b>$<?php echo $e($ev['raised']); ?></b><span class="cc-hero-pill"><?php echo (int)$ev['pct']; ?>% of goal</span></div>
+                    <div class="cc-hero-amt"><b>$<?php echo $e($ev['raised']); ?></b><?php if ($ev['pct'] !== null): ?><span class="cc-hero-pill"><?php echo (int)$ev['pct']; ?>% of goal</span><?php endif; ?></div>
                     <div class="cc-hero-bar"><i style="width: <?php echo $fill; ?>%;"></i></div>
+                    <?php if ($goalN !== null): ?>
                     <p class="cc-hero-sub"><?php echo $diff >= 0 ? '<b class="up">$' . round($diff / 1000) . 'k over goal</b>' : '<b>$' . round(abs($diff) / 1000) . 'k to go</b>'; ?> &middot; $<?php echo $e($ev['goal']); ?> target</p>
+                    <?php else: ?>
+                    <p class="cc-hero-sub"><b>$<?php echo $e($ev['collected']); ?></b> collected &middot; no goal set</p>
+                    <?php endif; ?>
                 </div>
                 <div class="cc-hero-side">
-                    <div class="cc-countdown" data-countdown>
-                        <span class="cc-cd-lab">Auction ends in</span>
+                    <div class="cc-countdown" data-countdown<?php if ($LIVE && $endEpoch !== null): ?> data-end="<?php echo (int)$endEpoch; ?>"<?php endif; ?>>
+                        <span class="cc-cd-lab"><?php echo ($LIVE && $endEpoch !== null && $endEpoch <= time()) ? 'Auction ended' : 'Auction ends in'; ?></span>
                         <div class="cc-cd-units">
                             <span class="u"><b data-d>02</b><span>days</span></span>
                             <span class="u"><b data-h>15</b><span>hrs</span></span>
@@ -222,17 +479,18 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                             <path d="<?php echo $spLine; ?>" fill="none" stroke="#166534" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <circle cx="<?php echo $spEnd[0]; ?>" cy="<?php echo $spEnd[1]; ?>" r="3" fill="#166534"/>
                         </svg>
-                        <span class="cc-spark-cap">Raised over time</span>
+                        <span class="cc-spark-cap"><?php echo $e($sparkCap); ?></span>
                     </div>
                 </div>
             </div>
 
-            <!-- Quick actions -->
+            <!-- Quick actions (in live mode these open the full admin console, where item CRUD, messaging, and closing already work) -->
+            <?php $qaTag = $LIVE ? 'a' : 'button'; $qaHref = fn($frag) => $LIVE ? ' href="admin.php' . $frag . '"' : ' type="button"'; ?>
             <div class="cc-quick">
-                <button type="button" data-tip="Create a new auction item with photos and a starting bid."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>Add item</button>
-                <button type="button" data-tip="Send an announcement or reminder to everyone in the room."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>Message bidders</button>
-                <button type="button" data-tip="Show a full-screen leaderboard on the projector."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>Big-screen mode</button>
-                <button type="button" data-tip="End bidding and start automatic settlement."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h13l-2.5 4L18 12H5"/></svg></span>Close auctions</button>
+                <<?php echo $qaTag . $qaHref('#items'); ?> data-tip="Create a new auction item with photos and a starting bid."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>Add item</<?php echo $qaTag; ?>>
+                <<?php echo $qaTag . $qaHref('#users'); ?> data-tip="Send an announcement or reminder to everyone in the room."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>Message bidders</<?php echo $qaTag; ?>>
+                <<?php echo $qaTag . $qaHref(''); ?> data-tip="Show a full-screen leaderboard on the projector."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>Big-screen mode</<?php echo $qaTag; ?>>
+                <<?php echo $qaTag . $qaHref('#close'); ?> data-tip="End bidding and start automatic settlement."><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h13l-2.5 4L18 12H5"/></svg></span>Close auctions</<?php echo $qaTag; ?>>
             </div>
 
             <!-- Secondary stats -->
@@ -244,24 +502,29 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
 
             <!-- Needs attention + activity -->
             <div class="cc-grid-2">
+                <?php
+                    $attRows = [];
+                    if ((int)$ev['closing'] > 0) { $attRows[] = ['ic' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', 'txt' => '<b>' . (int)$ev['closing'] . ' items</b> close within the hour', 'cta' => 'Review', 'go' => 'items']; }
+                    if ($outK > 0) { $attRows[] = ['ic' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>', 'txt' => '<b>$' . $outK . 'k</b> in winning bids not yet collected', 'cta' => 'View payments', 'go' => 'payments']; }
+                    if ($attMissingPhotos > 0) { $attRows[] = ['ic' => '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>', 'txt' => '<b>' . (int)$attMissingPhotos . ' items</b> missing photos', 'cta' => 'Add photos', 'go' => $LIVE ? 'admin' : 'items']; }
+                ?>
                 <div class="cc-card">
-                    <div class="cc-card-head"><h3>Needs your attention</h3><span>3 items</span></div>
+                    <div class="cc-card-head"><h3>Needs your attention</h3><span><?php echo count($attRows); ?> item<?php echo count($attRows) === 1 ? '' : 's'; ?></span></div>
                     <div class="cc-att">
+                        <?php if (!$attRows): ?>
+                            <p class="cc-att-clear">Nothing needs your attention right now. Nice work.</p>
+                        <?php endif; ?>
+                        <?php foreach ($attRows as $ar): ?>
                         <div class="cc-att-row">
-                            <span class="cc-att-ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-                            <span class="cc-att-txt"><b><?php echo (int)$ev['closing']; ?> items</b> close within the hour</span>
-                            <button class="cc-btn cc-btn-sm" type="button">Review</button>
+                            <span class="cc-att-ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><?php echo $ar['ic']; ?></svg></span>
+                            <span class="cc-att-txt"><?php echo $ar['txt']; ?></span>
+                            <?php if ($ar['go'] === 'admin'): ?>
+                                <a class="cc-btn cc-btn-sm" href="admin.php"><?php echo $e($ar['cta']); ?></a>
+                            <?php else: ?>
+                                <button class="cc-btn cc-btn-sm" type="button" data-panel="<?php echo $e($ar['go']); ?>"><?php echo $e($ar['cta']); ?></button>
+                            <?php endif; ?>
                         </div>
-                        <div class="cc-att-row">
-                            <span class="cc-att-ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
-                            <span class="cc-att-txt"><b>$<?php echo $outK; ?>k</b> in unpaid winners</span>
-                            <button class="cc-btn cc-btn-sm" type="button">Send reminders</button>
-                        </div>
-                        <div class="cc-att-row">
-                            <span class="cc-att-ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
-                            <span class="cc-att-txt"><b>3 items</b> missing photos</span>
-                            <button class="cc-btn cc-btn-sm" type="button">Add photos</button>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
                 <div class="cc-card">
@@ -288,7 +551,7 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
         <section class="cc-panel" data-panel="items" aria-label="Items" hidden>
             <div class="cc-panel-head"><h1>Items</h1><p><?php echo $isEmpty ? 'No items yet.' : (int)$ev['items'] . ' items catalogued &middot; ' . (int)$ev['closing'] . ' closing soon.'; ?></p></div>
             <?php if ($isEmpty): ?>
-                <div class="cc-emptymini"><p>Your item catalog is empty.</p><button class="cc-btn cc-btn-primary" type="button">Add your first item</button></div>
+                <div class="cc-emptymini"><p>Your item catalog is empty.</p><?php if ($LIVE): ?><a class="cc-btn cc-btn-primary" href="admin.php#items">Add your first item</a><?php else: ?><a class="cc-btn cc-btn-primary" href="signup.php">Add your first item</a><?php endif; ?></div>
             <?php else: ?>
             <div class="cc-card cc-tablewrap">
                 <table class="cc-table">
@@ -301,7 +564,7 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                                 <td class="strong">$<?php echo $e($it['bid']); ?></td>
                                 <td><?php echo (int)$it['bids']; ?></td>
                                 <td><?php echo $e($it['left']); ?></td>
-                                <td><?php echo $it['status'] === 'closing' ? '<span class="cc-tag warn">Closing soon</span>' : '<span class="cc-tag ok">Live</span>'; ?></td>
+                                <td><?php echo $it['status'] === 'closing' ? '<span class="cc-tag warn">Closing soon</span>' : ($it['status'] === 'closed' ? '<span class="cc-tag muted">Closed</span>' : '<span class="cc-tag ok">Live</span>'); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -377,7 +640,7 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                     <div class="cc-card cc-report">
                         <div class="cc-report-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></div>
                         <div class="cc-report-body"><h3><?php echo $e($r['name']); ?></h3><p><?php echo $e($r['desc']); ?></p></div>
-                        <button class="cc-btn" type="button"<?php echo $isEmpty ? ' disabled' : ''; ?>>Download</button>
+                        <?php if ($LIVE && !$isEmpty): ?><a class="cc-btn" href="admin.php#reports">Open</a><?php else: ?><button class="cc-btn" type="button"<?php echo $isEmpty ? ' disabled' : ''; ?>>Download</button><?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -432,7 +695,19 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                         <label class="cc-field"><span>Headline</span><input type="text" data-hero-head value="<?php echo $e($ev['headline']); ?>" maxlength="42"></label>
                         <label class="cc-field"><span>Tagline</span><input type="text" data-hero-tag value="<?php echo $e($ev['tagline']); ?>" maxlength="60"></label>
                     </section>
+                    <?php if ($LIVE): ?>
+                    <div class="cc-brand-save"
+                         data-branding-live
+                         data-org-id="<?php echo (int)$orgId; ?>"
+                         data-org-accent="<?php echo $e($orgRow['brand_accent'] ?? '#d99a2b'); ?>"
+                         data-org-logo="<?php echo $e($orgRow['logo_url'] ?? ''); ?>"
+                         data-org-email="<?php echo $e($orgRow['contact_email'] ?? ''); ?>">
+                        <button class="cc-btn cc-btn-primary" type="button" data-branding-save>Save branding</button>
+                        <span data-branding-msg>Publishes your color and organization name to your live auction pages. Fonts &amp; cover photos preview here; publishing them is coming soon.</span>
+                    </div>
+                    <?php else: ?>
                     <div class="cc-brand-save"><button class="cc-btn cc-btn-primary" type="button">Save branding</button><span>Changes preview live &middot; save to publish</span></div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="cc-brand-preview">
@@ -469,21 +744,33 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                         <?php if ($isCur): ?><span class="cc-plan-badge">Current plan</span><?php endif; ?>
                         <h3><?php echo $e($pl['label']); ?></h3>
                         <div class="cc-plan-price"><b><?php echo $e($pl['price']); ?></b><span><?php echo $e($pl['per']); ?></span></div>
+                        <?php $isFreeKey = in_array($pk, ['seedling', 'free'], true); ?>
                         <?php if ($isCur): ?>
                             <button class="cc-btn cc-btn-block" type="button" disabled>Your plan</button>
+                        <?php elseif ($LIVE && $isFreeKey): ?>
+                            <button class="cc-btn cc-btn-block" type="button" data-billing-portal>Downgrade in billing portal</button>
+                        <?php elseif ($LIVE): ?>
+                            <button class="cc-btn cc-btn-primary cc-btn-block" type="button" data-plan-checkout="<?php echo $e($pk); ?>">Upgrade to <?php echo $e($pl['label']); ?></button>
                         <?php elseif ($pk === 'enterprise'): ?>
                             <button class="cc-btn cc-btn-block" type="button">Contact sales</button>
                         <?php else: ?>
-                            <button class="cc-btn cc-btn-primary cc-btn-block" type="button"><?php echo $pk === 'seedling' ? 'Downgrade' : 'Upgrade'; ?></button>
+                            <button class="cc-btn cc-btn-primary cc-btn-block" type="button"><?php echo $isFreeKey ? 'Downgrade' : 'Upgrade'; ?></button>
                         <?php endif; ?>
                         <ul class="cc-plan-feats"><?php foreach ($pl['feats'] as $f): ?><li><?php echo $e($f); ?></li><?php endforeach; ?></ul>
                     </div>
                 <?php endforeach; ?>
             </div>
+            <?php if ($LIVE): ?>
+            <div class="cc-card cc-billnote">
+                <div><b>Billing is handled securely by Stripe</b><span>Payment method, invoices, and plan changes live in your billing portal.</span></div>
+                <button class="cc-btn" type="button" data-billing-portal>Open billing portal</button>
+            </div>
+            <?php else: ?>
             <div class="cc-card cc-billnote">
                 <div><b>Billed monthly &middot; next charge May 1</b><span>Visa ending 4242 &middot; manage payment method anytime.</span></div>
                 <button class="cc-btn" type="button">Billing history</button>
             </div>
+            <?php endif; ?>
             <p class="cc-app-note"><span aria-hidden="true">📱</span> In the iPhone app, plan changes open on the web to keep things simple, this section links out to silentbidpro.com.</p>
         </section>
 
@@ -491,6 +778,15 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
         <section class="cc-panel" data-panel="settings" aria-label="Settings and account" hidden>
             <div class="cc-panel-head"><h1>Settings &amp; Account</h1><p>Payouts, your team, and event details.</p></div>
             <div class="cc-settings">
+                <?php if ($LIVE): ?>
+                <div class="cc-card">
+                    <div class="cc-card-head"><h3>Payments</h3><span class="cc-tag ok">Stripe</span></div>
+                    <div class="cc-row"><span class="lab">Processor<span>Card payments &amp; receipts</span></span><span class="cc-set-val">Stripe</span></div>
+                    <div class="cc-row"><span class="lab">Payment mode<span>For the selected event</span></span><span class="cc-set-val"><?php echo $e(ucfirst((string)($sel['payment_mode'] ?? 'standard'))); ?></span></div>
+                    <div class="cc-row"><span class="lab">Payout details<span>Managed in your Stripe account</span></span><span class="cc-set-val">stripe.com</span></div>
+                    <a class="cc-btn" href="https://dashboard.stripe.com" target="_blank" rel="noopener">Open Stripe dashboard</a>
+                </div>
+                <?php else: ?>
                 <div class="cc-card">
                     <div class="cc-card-head"><h3>Payouts</h3><span class="cc-tag ok">Connected</span></div>
                     <div class="cc-row"><span class="lab">Bank account<span>Where your funds land</span></span><span class="cc-set-val">Chase &bull;&bull; 4021</span></div>
@@ -498,6 +794,7 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                     <div class="cc-row"><span class="lab">Platform fee<span>Per successful payment</span></span><span class="cc-set-val">Included in plan</span></div>
                     <button class="cc-btn" type="button">Update payout details</button>
                 </div>
+                <?php endif; ?>
                 <div class="cc-card">
                     <div class="cc-card-head"><h3>Team</h3><button class="cc-btn cc-btn-sm" type="button">Invite member</button></div>
                     <ul class="cc-team">
@@ -506,15 +803,31 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                         <?php endforeach; ?>
                     </ul>
                 </div>
+                <?php if ($LIVE && $sel): ?>
+                <form class="cc-card" data-event-form data-event-id="<?php echo (int)$selEventId; ?>" data-org-id="<?php echo (int)$orgId; ?>">
+                    <div class="cc-card-head"><h3>Event details</h3></div>
+                    <label class="cc-field"><span>Event name</span><input type="text" name="name" required maxlength="255" value="<?php echo $e($sel['name']); ?>"></label>
+                    <div class="cc-field-row">
+                        <label class="cc-field"><span>Event date</span><input type="date" name="event_date" value="<?php echo $e($sel['event_date'] ? date('Y-m-d', strtotime((string)$sel['event_date'])) : ''); ?>"></label>
+                        <label class="cc-field"><span>Fundraising goal ($)</span><input type="number" name="fundraising_goal" min="0" step="1" value="<?php echo $goalSet ? (int)$goalAmt : ''; ?>" placeholder="e.g. 100000"></label>
+                    </div>
+                    <div class="cc-field-row">
+                        <label class="cc-field"><span>Status</span><input type="text" value="<?php echo $e(ucfirst((string)($sel['status'] ?? 'draft'))); ?>" disabled></label>
+                    </div>
+                    <button class="cc-btn cc-btn-primary" type="submit">Save changes</button>
+                    <span class="cc-form-msg" data-event-msg></span>
+                </form>
+                <?php else: ?>
                 <div class="cc-card">
                     <div class="cc-card-head"><h3>Event details</h3></div>
                     <label class="cc-field"><span>Event name</span><input type="text" value="<?php echo $e($ev['event']); ?>"></label>
                     <div class="cc-field-row">
-                        <label class="cc-field"><span>Fundraising goal</span><input type="text" value="$<?php echo $e($ev['goal']); ?>"></label>
+                        <label class="cc-field"><span>Fundraising goal</span><input type="text" value="$<?php echo $e($ev['goal'] ?? '100,000'); ?>"></label>
                         <label class="cc-field"><span>Status</span><input type="text" value="<?php echo $isEmpty ? 'Draft' : 'Open'; ?>"></label>
                     </div>
                     <button class="cc-btn cc-btn-primary" type="button">Save changes</button>
                 </div>
+                <?php endif; ?>
             </div>
         </section>
 
@@ -600,7 +913,9 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
     // ---- live countdown on the dashboard hero ----
     var cd = document.querySelector('[data-countdown]');
     if (cd) {
-        var end = Date.now() + ((2 * 86400) + (15 * 3600) + (47 * 60)) * 1000;
+        // Live mode passes the real auction end (epoch seconds); demo fakes 2d 15h 47m.
+        var endAttr = cd.getAttribute('data-end');
+        var end = endAttr ? parseInt(endAttr, 10) * 1000 : Date.now() + ((2 * 86400) + (15 * 3600) + (47 * 60)) * 1000;
         var pad = function (n) { return String(n).padStart(2, '0'); };
         var tick = function () {
             var s = Math.max(0, Math.floor((end - Date.now()) / 1000));
@@ -663,6 +978,107 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
     }
 })();
 </script>
+<?php if ($LIVE): ?>
+<script>
+// ---- LIVE MODE: real actions against the existing admin APIs ----
+(function () {
+    function postJSON(url, body) {
+        return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); });
+    }
+
+    // Sign out (30-day session cookie is cleared server-side).
+    var out = document.querySelector('[data-signout]');
+    if (out) out.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        postJSON('api/admin/logout-account.php', {}).catch(function () {}).then(function () { location.href = 'index.php'; });
+    });
+
+    // Create first event (empty state).
+    var cf = document.querySelector('[data-create-event]');
+    if (cf) cf.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var errEl = cf.querySelector('[data-create-err]');
+        var orgId = <?php echo (int)$orgId; ?>;
+        postJSON('api/admin/update-branding.php?action=update_event', {
+            organization_id: orgId,
+            name: cf.querySelector('[name="name"]').value,
+            event_date: cf.querySelector('[name="event_date"]').value
+        }).then(function (res) {
+            if (res.ok && res.d.status === 'ok') { location.href = 'command-center.php?event=' + res.d.data.event_id; }
+            else { errEl.textContent = (res.d && res.d.message) || 'Could not create the event.'; errEl.hidden = false; }
+        }).catch(function () { errEl.textContent = 'Could not create the event.'; errEl.hidden = false; });
+    });
+
+    // Branding: publish color + organization name (propagates to all event pages).
+    var bwrap = document.querySelector('[data-branding-live]');
+    if (bwrap) {
+        var bbtn = bwrap.querySelector('[data-branding-save]');
+        var bmsg = bwrap.querySelector('[data-branding-msg]');
+        bbtn.addEventListener('click', function () {
+            var scope = document.querySelector('.cc-panel[data-panel="branding"]');
+            var color = scope.querySelector('[data-color-input]').value;
+            var name = scope.querySelector('[data-org-name]').value.trim();
+            if (!name) { bmsg.textContent = 'Organization name is required.'; return; }
+            bbtn.disabled = true; bmsg.textContent = 'Publishing…';
+            postJSON('api/admin/update-branding.php?action=update_organization', {
+                organization_id: parseInt(bwrap.getAttribute('data-org-id'), 10),
+                name: name,
+                brand_primary: color,
+                brand_accent: bwrap.getAttribute('data-org-accent') || '#d99a2b',
+                logo_url: bwrap.getAttribute('data-org-logo') || '',
+                contact_email: bwrap.getAttribute('data-org-email') || ''
+            }).then(function (res) {
+                bbtn.disabled = false;
+                bmsg.textContent = (res.ok && res.d.status === 'ok')
+                    ? 'Published! Your live auction pages now use this branding.'
+                    : ((res.d && res.d.message) || 'Could not save branding.');
+            }).catch(function () { bbtn.disabled = false; bmsg.textContent = 'Could not save branding.'; });
+        });
+    }
+
+    // Subscription: Stripe Checkout upgrade / billing portal.
+    document.querySelectorAll('[data-plan-checkout]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            postJSON('api/billing/create-checkout.php', { org_id: <?php echo (int)$orgId; ?>, plan: btn.getAttribute('data-plan-checkout') })
+                .then(function (res) {
+                    if (res.ok && res.d.status === 'ok' && res.d.url) { location.href = res.d.url; }
+                    else { btn.disabled = false; alert((res.d && res.d.message) || 'Could not start checkout.'); }
+                }).catch(function () { btn.disabled = false; });
+        });
+    });
+    document.querySelectorAll('[data-billing-portal]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            postJSON('api/billing/portal.php', { org_id: <?php echo (int)$orgId; ?> })
+                .then(function (res) {
+                    if (res.ok && res.d.status === 'ok' && res.d.url) { location.href = res.d.url; }
+                    else { btn.disabled = false; alert((res.d && res.d.message) || 'Could not open the billing portal.'); }
+                }).catch(function () { btn.disabled = false; });
+        });
+    });
+
+    // Event details save (name, date, fundraising goal).
+    var ef = document.querySelector('[data-event-form]');
+    if (ef) ef.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var msg = ef.querySelector('[data-event-msg]');
+        msg.textContent = 'Saving…';
+        postJSON('api/admin/update-branding.php?action=update_event', {
+            organization_id: parseInt(ef.getAttribute('data-org-id'), 10),
+            event_id: parseInt(ef.getAttribute('data-event-id'), 10),
+            name: ef.querySelector('[name="name"]').value,
+            event_date: ef.querySelector('[name="event_date"]').value,
+            fundraising_goal: ef.querySelector('[name="fundraising_goal"]').value
+        }).then(function (res) {
+            msg.textContent = (res.ok && res.d.status === 'ok') ? 'Saved.' : ((res.d && res.d.message) || 'Could not save.');
+            if (res.ok && res.d.status === 'ok') { setTimeout(function () { location.reload(); }, 600); }
+        }).catch(function () { msg.textContent = 'Could not save.'; });
+    });
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
 <?php

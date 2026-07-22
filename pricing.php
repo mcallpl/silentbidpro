@@ -122,7 +122,7 @@ $faqs = [
                     <p class="pr-plan-for">For your first auction</p>
                 </header>
                 <div class="pr-price"><span class="amt">$0</span><span class="per">forever</span></div>
-                <a class="sbp-btn sbp-btn-secondary sbp-btn-block" href="index.php#request-demo">Start for free</a>
+                <a class="sbp-btn sbp-btn-secondary sbp-btn-block" href="signup.php">Start for free</a>
                 <ul class="pr-feats">
                     <li><?php echo pr_check(); ?>1 active auction event</li>
                     <li><?php echo pr_check(); ?>Live bidding &amp; real-time analytics</li>
@@ -140,7 +140,7 @@ $faqs = [
                     <p class="pr-plan-for">For growing programs</p>
                 </header>
                 <div class="pr-price"><span class="amt">$99</span><span class="per">/ month</span></div>
-                <a class="sbp-btn sbp-btn-primary sbp-btn-block" href="index.php#request-demo">Start with Pro</a>
+                <a class="sbp-btn sbp-btn-primary sbp-btn-block" href="signup.php?plan=pro">Start with Pro</a>
                 <ul class="pr-feats">
                     <li class="pr-feats-lead">Everything in Seedling, plus</li>
                     <li><?php echo pr_check(); ?>Up to 3 active events</li>
@@ -202,8 +202,8 @@ $faqs = [
                     <?php endforeach; ?>
                     <tr class="pr-table-cta">
                         <th scope="row"><span class="pr-price-inline">Monthly price</span></th>
-                        <td><b>$0</b><a class="pr-tlink" href="index.php#request-demo">Start free</a></td>
-                        <td class="pr-td-pop"><b>$99</b><a class="pr-tlink" href="index.php#request-demo">Choose Pro</a></td>
+                        <td><b>$0</b><a class="pr-tlink" href="signup.php">Start free</a></td>
+                        <td class="pr-td-pop"><b>$99</b><a class="pr-tlink" href="signup.php?plan=pro">Choose Pro</a></td>
                         <td><b>$399</b><a class="pr-tlink" href="index.php#request-demo">Contact sales</a></td>
                     </tr>
                 </tbody>

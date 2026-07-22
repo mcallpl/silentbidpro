@@ -26,6 +26,10 @@ if (!$admin) {
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $org_id = (int)($input['org_id'] ?? 0);
 $plan = normalizePlan($input['plan'] ?? '');
+// Default to the admin's own organization (organizer self-serve flow).
+if (!$org_id) {
+    $org_id = (int)($admin['organization_id'] ?? 0);
+}
 if (!$org_id) {
     http_response_code(400);
     die(json_encode(['status' => 'error', 'message' => 'org_id required']));

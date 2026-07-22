@@ -225,6 +225,17 @@ function handleUpdateEvent($input) {
             die(json_encode(['status' => 'error', 'message' => 'Failed to update event']));
         }
 
+        // Optional fundraising goal (migration 012; guarded so pre-migration DBs keep working).
+        if (array_key_exists('fundraising_goal', $input) && dbColumnExists('events', 'fundraising_goal')) {
+            $goal_raw = trim((string)$input['fundraising_goal']);
+            $goal_val = $goal_raw === '' ? null : (float)str_replace([',', '$'], '', $goal_raw);
+            if ($goal_val !== null && ($goal_val < 0 || $goal_val > 999999999)) {
+                http_response_code(400);
+                die(json_encode(['status' => 'error', 'message' => 'Fundraising goal must be between 0 and 999,999,999']));
+            }
+            dbUpdate("UPDATE events SET fundraising_goal = ? WHERE id = ?", [$goal_val, $event_id]);
+        }
+
         error_log('[BRANDING API] ✓ Event ' . $event_id . ' updated successfully');
 
         echo json_encode([
