@@ -53,7 +53,7 @@ $branding = getBrandingData();
             <a href="pricing.php">Pricing</a>
         </nav>
         <div class="sbp-nav-right">
-            <a class="sbp-nav-signin" href="command-center.php">Sign In</a>
+            <a class="sbp-nav-signin" href="bid.php">Sign In</a>
             <a class="sbp-btn sbp-btn-primary" href="#request-demo">Request a Demo</a>
             <button class="sbp-nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="sbpDrawer" data-drawer-open>
                 <span></span><span></span><span></span>
@@ -74,7 +74,7 @@ $branding = getBrandingData();
         <a href="#for-organizations" data-drawer-close>For Organizations</a>
         <a href="#for-bidders" data-drawer-close>For Bidders</a>
         <a href="pricing.php" data-drawer-close>Pricing</a>
-        <a href="command-center.php" data-drawer-close>Sign In</a>
+        <a href="bid.php" data-drawer-close>Sign In</a>
         <a class="sbp-btn sbp-btn-primary" href="#request-demo" data-drawer-close>Request a Demo</a>
     </div>
 </div>
@@ -530,7 +530,7 @@ $branding = getBrandingData();
                 <h5>Company</h5>
                 <a href="#request-demo">Request a Demo</a>
                 <a href="#request-demo">Contact Sales</a>
-                <a href="command-center.php">Sign In</a>
+                <a href="bid.php">Sign In</a>
                 <a href="privacy.php">Privacy Policy</a>
                 <a href="terms.php">Terms of Service</a>
             </div>
@@ -565,35 +565,6 @@ $branding = getBrandingData();
     toggle.addEventListener('click', open);
     drawer.querySelectorAll('[data-drawer-close]').forEach(function (el) { el.addEventListener('click', close); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-})();
-
-// ---- Accessible modals with focus handling ----
-(function () {
-    var lastFocus = null;
-    function openModal(id) {
-        var m = document.getElementById(id);
-        if (!m) return;
-        lastFocus = document.activeElement;
-        m.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        var f = m.querySelector('a, button');
-        if (f) f.focus();
-    }
-    function closeModal(m) {
-        m.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-        if (lastFocus) lastFocus.focus();
-    }
-    document.querySelectorAll('[data-modal-open]').forEach(function (btn) {
-        btn.addEventListener('click', function () { openModal(btn.getAttribute('data-modal-open')); });
-    });
-    document.querySelectorAll('.sbp-modal').forEach(function (m) {
-        m.querySelectorAll('[data-modal-close]').forEach(function (el) { el.addEventListener('click', function () { closeModal(m); }); });
-    });
-    document.addEventListener('keydown', function (e) {
-        if (e.key !== 'Escape') return;
-        document.querySelectorAll('.sbp-modal[aria-hidden="false"]').forEach(closeModal);
-    });
 })();
 
 // ---- Brand Switcher: re-skins a single preview window per tab ----
