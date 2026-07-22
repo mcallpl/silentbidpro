@@ -495,3 +495,4 @@ body.cc {
 .cc-createform .cc-field { margin-bottom: 12px; }
 .cc-createform-err { color: var(--cc-warn); font-size: 0.82rem; margin: 10px 0 0; }
 .cc-form-msg { display: inline-block; margin-left: 12px; font-size: 0.8rem; color: var(--cc-muted); }
+.cc-side-foot .cc-back { display: block; margin-bottom: 6px; }
