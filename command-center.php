@@ -112,6 +112,14 @@ else:
 $orgs = getAdminAccessibleOrganizations($admin['id']) ?: [];
 $orgId = (int)($orgs[0]['id'] ?? 0);
 if (!$orgId) { $orgId = (int)($admin['organization_id'] ?? 0); }
+// Super admins may steer to any organization (?org=); organizers stay pinned
+// to their own — the requested id must be in their accessible list.
+$reqOrg = (int)($_GET['org'] ?? 0);
+if ($reqOrg && $reqOrg !== $orgId) {
+    foreach ($orgs as $o) {
+        if ((int)$o['id'] === $reqOrg) { $orgId = $reqOrg; break; }
+    }
+}
 $orgRow = $orgId ? dbGetRow("SELECT id, name, slug, contact_email, brand_primary, brand_accent, logo_url FROM organizations WHERE id = ?", [$orgId]) : null;
 if (!$orgRow && !empty($admin['is_super_admin'])) {
     $orgRow = dbGetRow("SELECT id, name, slug, contact_email, brand_primary, brand_accent, logo_url FROM organizations ORDER BY id LIMIT 1");
@@ -375,9 +383,18 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
             <span class="cc-logo-m" aria-hidden="true"><img src="images/brand/silentbidpro-logo-dark.png" alt=""></span>
+            <?php if ($LIVE && !empty($admin['is_super_admin']) && count($orgs) > 1): ?>
+            <label class="cc-select">
+                <select aria-label="Select organization" onchange="if(this.value){location.href='command-center.php?org='+this.value;}">
+                    <?php foreach ($orgs as $o): ?>
+                        <option value="<?php echo (int)$o['id']; ?>"<?php echo (int)$o['id'] === $orgId ? ' selected' : ''; ?>><?php echo $e($o['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <?php endif; ?>
             <label class="cc-select">
                 <?php if ($LIVE): ?>
-                <select aria-label="Select auction" onchange="if(this.value){location.href='command-center.php?event='+this.value;}">
+                <select aria-label="Select auction" onchange="if(this.value){location.href='command-center.php?org=<?php echo (int)$orgId; ?>&event='+this.value;}">
                     <?php if ($isEmpty): ?><option value="">No auctions yet</option><?php endif; ?>
                     <?php foreach ($orgEvents as $oe): ?>
                         <option value="<?php echo (int)$oe['id']; ?>"<?php echo (int)$oe['id'] === $selEventId ? ' selected' : ''; ?>><?php echo $e($oe['name']); ?></option>
