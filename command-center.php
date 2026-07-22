@@ -357,6 +357,11 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
     </nav>
     <div class="cc-side-foot">
         <a class="cc-back" href="index.php">&larr; Back to site</a>
+        <?php if ($LIVE): ?>
+            <a class="cc-back" href="#" data-signout>Sign out</a>
+        <?php else: ?>
+            <a class="cc-back" href="signup.php?mode=login">Sign in</a>
+        <?php endif; ?>
         <p class="cc-side-org"><?php echo $e($ev['org']); ?></p>
     </div>
 </aside>
@@ -987,11 +992,12 @@ $fontQuery = str_replace(' ', '+', $ev['font']);
             .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); });
     }
 
-    // Sign out (30-day session cookie is cleared server-side).
-    var out = document.querySelector('[data-signout]');
-    if (out) out.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        postJSON('api/admin/logout-account.php', {}).catch(function () {}).then(function () { location.href = 'index.php'; });
+    // Sign out (30-day session cookie is cleared server-side). Two links: topbar + drawer.
+    document.querySelectorAll('[data-signout]').forEach(function (out) {
+        out.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            postJSON('api/admin/logout-account.php', {}).catch(function () {}).then(function () { location.href = 'index.php'; });
+        });
     });
 
     // Create first event (empty state).
